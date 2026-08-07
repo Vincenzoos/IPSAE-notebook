@@ -9,6 +9,7 @@ Launch from notebooks/ipsae_eval.ipynb:
 
 from __future__ import annotations
 
+from folder_picker import folder_value, make_folder_picker
 from ipsae_evals_summary import resolve_summary_csv_path, summarize_ipsae_folder
 from paths import rel_repo_path
 from ui_helpers import (
@@ -39,11 +40,10 @@ def launch_ipsae_comparison_ui() -> None:
     state = {"running": False}
     cell_initialized: set[str] = set()
 
-    summary_folder = widgets.Text(
-        value="ipsae_evals",
+    summary_folder, _summary_folder_refresh, summary_folder_row = make_folder_picker(
         description="Metrics folder",
-        placeholder="ipsae_evals or bulk_ipsae_evals_YYYYMMDD_HHMMSS",
-        layout=widgets.Layout(width="940px"),
+        dropdown_width="840px",
+        placeholder_when_empty="ipsae_evals",
     )
     summary_csv = widgets.Text(
         value="ipsae_evals_summary.csv",
@@ -70,7 +70,7 @@ def launch_ipsae_comparison_ui() -> None:
     def on_run_summary(_button) -> None:
         if state["running"]:
             return
-        folder = summary_folder.value.strip() or "ipsae_evals"
+        folder = folder_value(summary_folder) or "ipsae_evals"
         csv_name = summary_csv.value.strip() or "ipsae_evals_summary.csv"
         state["running"] = True
         run_summary.disabled = True
@@ -101,10 +101,9 @@ def launch_ipsae_comparison_ui() -> None:
     comparison_panel = panel(
         [
             html(
-                f'<span style="{SOFT}">Select a folder that already contains collected ipSAE metric outputs, such as '
-                "ipsae_evals or a bulk_ipsae_evals timestamp folder. This analysis is separate from running ipSAE.</span>"
+                f'<span style="{SOFT}">Select an ipSAE output folder to summarize the results.'
             ),
-            summary_folder,
+            summary_folder_row,
             summary_csv,
             run_summary,
         ]
@@ -113,14 +112,14 @@ def launch_ipsae_comparison_ui() -> None:
     display(
         widgets.VBox(
             [
-                banner("ipSAE Comparison CSV"),
+                banner("ipSAE eval summary"),
                 comparison_panel,
                 summary_status,
             ]
         )
     )
     show_summary_result(
-        "Ready. Choose a metrics folder, then summarize to show results here.",
+        "Ready. Choose an ipSAE output folder, then summarize to show results here.",
         SOFT,
     )
 

@@ -16,6 +16,7 @@ import threading
 from pathlib import Path
 
 from bulk_eval import discover_af3_models, new_bulk_output_dir, run_bulk_ipsae, write_bulk_run_log
+from folder_picker import folder_value, make_folder_picker
 from naming import model_name_from_structure, safe_name
 from paths import DEFAULT_EVALS_DIR, IPSAE_SCRIPT, rel_repo_path, resolve_repo_path
 from single_model_eval import IpsaeJob, run_ipsae
@@ -79,11 +80,9 @@ def launch_ipsae_eval_ui() -> None:
     run_single = widgets.Button(description="Run ipSAE", button_style="primary", icon="play", disabled=True)
     discover_bulk = widgets.Button(description="Find models", button_style="info", icon="search", disabled=True)
     run_bulk = widgets.Button(description="Run ipSAE", button_style="primary", icon="play", disabled=True)
-    bulk_folder = widgets.Text(
-        value="",
+    bulk_folder, _bulk_folder_refresh, bulk_folder_row = make_folder_picker(
         description="AF3 folder",
-        placeholder="Cameron IFIT5 binder AlphaFold3 models",
-        layout=widgets.Layout(width="940px"),
+        dropdown_width="840px",
     )
     bulk_model_index = widgets.IntText(value=0, description="Model", layout=widgets.Layout(width="180px"))
 
@@ -107,7 +106,7 @@ def launch_ipsae_eval_ui() -> None:
     bulk_panel = widgets.VBox(
         [
             html(
-                f'<span style="{SOFT}">Enter an AlphaFold Server output folder. The UI will discover matching '
+                f'<span style="{SOFT}">Select an AlphaFold Server output folder. The UI will discover matching '
                 "model_N CIF files and full_data_N JSON files across all complex subfolders before running.</span>"
             ),
             warning("Boltz folder structure is not supported in bulk mode yet. Use Single Model for Boltz, or provide an AlphaFold Server-style export folder here."),
@@ -126,7 +125,7 @@ def launch_ipsae_eval_ui() -> None:
                 f'<span style="{SOFT}">AlphaFold Server ranks structures from 0 to 4, with model 0 as the highest-confidence prediction. '
                 f'<a href="{AF3_SERVER_OUTPUT_URL}" target="_blank">Official AlphaFold Server output reference</a>.</span>'
             ),
-            bulk_folder,
+            bulk_folder_row,
             bulk_model_index,
             discover_bulk,
             run_bulk,
@@ -176,15 +175,18 @@ def launch_ipsae_eval_ui() -> None:
             dist_cutoff=float(dist_cutoff.value),
         )
 
+    def selected_bulk_folder() -> str:
+        return folder_value(bulk_folder)
+
     def bulk_input_key() -> tuple[str, int]:
-        return (bulk_folder.value.strip(), int(bulk_model_index.value))
+        return (selected_bulk_folder(), int(bulk_model_index.value))
 
     def sync_single_controls(disabled: bool = False) -> None:
         has_required_paths = bool(structure_path.value.strip()) and bool(pae_path.value.strip())
         run_single.disabled = disabled or not has_required_paths
 
     def sync_bulk_controls(disabled: bool = False) -> None:
-        has_folder = bool(bulk_folder.value.strip())
+        has_folder = bool(selected_bulk_folder())
         discover_bulk.disabled = disabled or not has_folder
         run_bulk.disabled = disabled or not state["bulk_jobs"] or state["bulk_source"] != bulk_input_key()
 
@@ -240,7 +242,7 @@ def launch_ipsae_eval_ui() -> None:
             return
         try:
             jobs, preview = discover_af3_models(
-                bulk_folder.value.strip(),
+                selected_bulk_folder(),
                 model_index=int(bulk_model_index.value),
                 pae_cutoff=float(pae_cutoff.value),
                 dist_cutoff=float(dist_cutoff.value),
@@ -273,7 +275,7 @@ def launch_ipsae_eval_ui() -> None:
             return
 
         jobs = list(state["bulk_jobs"])
-        af3_folder = bulk_folder.value.strip()
+        af3_folder = selected_bulk_folder()
         model_index = int(bulk_model_index.value)
         state["running"] = True
         set_buttons_disabled(True)
