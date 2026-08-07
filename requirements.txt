@@ -1,0 +1,5 @@
+numpy
+pandas
+ipywidgets>=8
+jupyterlab_widgets
+widgetsnbextension
