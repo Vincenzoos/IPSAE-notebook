@@ -1,6 +1,20 @@
 # IPSAE
 Scoring function for interprotein interactions in AlphaFold2 and AlphaFold3
 
+# Notebook (Google Colab)
+
+Interactive evaluation UI (`ipsae_eval.ipynb`) for single-model and bulk AlphaFold Server outputs:
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb)
+
+Share that Colab link, or open the notebook from this repo. On Colab, run **Package Installation** first (clones this repo into `/content` and installs dependencies), then the evaluation cells. Upload structure/PAE files in the UI (zip a folder for bulk). Use the zip helper cell to package outputs for download.
+
+Direct Colab URL:
+
+```text
+https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb
+```
+
 # Installation
 Simply download the Python script ipsae.py. It may be necessary to install the Python numpy package with:
 
