@@ -119,3 +119,16 @@ def folder_value(dropdown: "widgets.Dropdown") -> str:
     if not value or value == NO_FOLDERS:
         return ""
     return value
+
+
+def folder_path_value(
+    dropdown: "widgets.Dropdown",
+    *,
+    base: Path | None = None,
+) -> Path | None:
+    """Return selected folder as an absolute path, or None when none are available."""
+    name = folder_value(dropdown)
+    if not name:
+        return None
+    root = Path(base).expanduser().resolve() if base is not None else ROOT
+    return (root / name).resolve()

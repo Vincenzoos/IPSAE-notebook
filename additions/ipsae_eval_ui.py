@@ -16,7 +16,6 @@ import threading
 from pathlib import Path
 
 from bulk_eval import discover_af3_models, new_bulk_output_dir, run_bulk_ipsae, write_bulk_run_log
-from folder_picker import folder_value, make_folder_picker
 from naming import model_name_from_structure, safe_name
 from paths import DEFAULT_EVALS_DIR, IPSAE_SCRIPT, rel_repo_path, resolve_repo_path
 from single_model_eval import IpsaeJob, run_ipsae
@@ -35,6 +34,12 @@ from ui_helpers import (
     widgets,
     HTML,
 )
+from upload_widgets import (
+    make_single_file_upload_row,
+    make_zip_folder_upload_panel,
+    path_for_textbox,
+)
+from uploads import PAE_EXTENSIONS, STRUCTURE_EXTENSIONS, ensure_upload_dirs
 
 AF3_SERVER_OUTPUT_URL = "https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/"
 
@@ -49,6 +54,7 @@ def launch_ipsae_eval_ui() -> None:
 
     # Replace any previously rendered copy of this UI when the notebook cell is rerun.
     clear_output(wait=True)
+    ensure_upload_dirs()
 
     status = widgets.HTML(value=f'<span style="{SOFT}">Ready. Choose single or bulk evaluation, then run ipSAE.</span>')
     state = {"running": False, "bulk_jobs": [], "bulk_source": None}
@@ -80,11 +86,39 @@ def launch_ipsae_eval_ui() -> None:
     run_single = widgets.Button(description="Run ipSAE", button_style="primary", icon="play", disabled=True)
     discover_bulk = widgets.Button(description="Find models", button_style="info", icon="search", disabled=True)
     run_bulk = widgets.Button(description="Run ipSAE", button_style="primary", icon="play", disabled=True)
-    bulk_folder, _bulk_folder_refresh, bulk_folder_row = make_folder_picker(
+
+    bulk_folder_path = widgets.Text(
+        value="",
         description="AF3 folder",
-        dropdown_width="840px",
+        placeholder="server path to AlphaFold Server export folder, or upload a zip below",
+        layout=widgets.Layout(width="940px"),
     )
     bulk_model_index = widgets.IntText(value=0, description="Model", layout=widgets.Layout(width="180px"))
+
+    def on_structure_saved(path: Path) -> None:
+        structure_path.value = path_for_textbox(path)
+        sync_single_controls(state["running"])
+
+    def on_pae_saved(path: Path) -> None:
+        pae_path.value = path_for_textbox(path)
+        sync_single_controls(state["running"])
+
+    structure_upload = make_single_file_upload_row(
+        description="Upload structure",
+        allowed_extensions=set(STRUCTURE_EXTENSIONS),
+        on_saved=on_structure_saved,
+    )
+    pae_upload = make_single_file_upload_row(
+        description="Upload PAE",
+        allowed_extensions=set(PAE_EXTENSIONS),
+        on_saved=on_pae_saved,
+    )
+
+    def on_zip_extracted(path: Path) -> None:
+        bulk_folder_path.value = path_for_textbox(path)
+        on_bulk_input_changed()
+
+    zip_upload_panel = make_zip_folder_upload_panel(on_extracted=on_zip_extracted)
 
     settings_panel = widgets.VBox([widgets.HBox([pae_cutoff, dist_cutoff])])
 
@@ -92,11 +126,14 @@ def launch_ipsae_eval_ui() -> None:
         [
             html(
                 f'<span style="{SOFT}">Provide one matching PAE/confidence file and one structure file. '
-                "This evaluates AF2, AF3, or Boltz predictions with saved PAE/confidence files only.</span>"
+                "This evaluates AF2, AF3, or Boltz predictions with saved PAE/confidence files only. "
+                "Type a server path or upload files below.</span>"
             ),
             label,
             structure_path,
+            structure_upload,
             pae_path,
+            pae_upload,
             collect_outputs,
             output_dir,
             run_single,
@@ -106,7 +143,8 @@ def launch_ipsae_eval_ui() -> None:
     bulk_panel = widgets.VBox(
         [
             html(
-                f'<span style="{SOFT}">Select an AlphaFold Server output folder. The UI will discover matching '
+                f'<span style="{SOFT}">Select an AlphaFold Server output folder already on the server, '
+                "or upload a zip of that folder. The UI will discover matching "
                 "model_N CIF files and full_data_N JSON files across all complex subfolders before running.</span>"
             ),
             warning("Boltz folder structure is not supported in bulk mode yet. Use Single Model for Boltz, or provide an AlphaFold Server-style export folder here."),
@@ -125,7 +163,8 @@ def launch_ipsae_eval_ui() -> None:
                 f'<span style="{SOFT}">AlphaFold Server ranks structures from 0 to 4, with model 0 as the highest-confidence prediction. '
                 f'<a href="{AF3_SERVER_OUTPUT_URL}" target="_blank">Official AlphaFold Server output reference</a>.</span>'
             ),
-            bulk_folder_row,
+            bulk_folder_path,
+            zip_upload_panel,
             bulk_model_index,
             discover_bulk,
             run_bulk,
@@ -176,7 +215,7 @@ def launch_ipsae_eval_ui() -> None:
         )
 
     def selected_bulk_folder() -> str:
-        return folder_value(bulk_folder)
+        return bulk_folder_path.value.strip()
 
     def bulk_input_key() -> tuple[str, int]:
         return (selected_bulk_folder(), int(bulk_model_index.value))
@@ -340,7 +379,7 @@ def launch_ipsae_eval_ui() -> None:
     collect_outputs.observe(sync_output_dir_state, names="value")
     structure_path.observe(lambda change: sync_single_controls(state["running"]), names="value")
     pae_path.observe(lambda change: sync_single_controls(state["running"]), names="value")
-    bulk_folder.observe(on_bulk_input_changed, names="value")
+    bulk_folder_path.observe(on_bulk_input_changed, names="value")
     bulk_model_index.observe(on_bulk_input_changed, names="value")
     sync_output_dir_state()
     sync_single_controls(False)

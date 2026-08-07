@@ -13,16 +13,19 @@ Original upstream IPSAE files remain in `dependencies/IPSAE/`:
 
 FreeBindCraft-added files live here in `dependencies/IPSAE/additions/`:
 
-- `paths.py`: repository root constants and path resolution helpers.
+- `paths.py`: repository root constants, project-root resolution, and upload path helpers.
 - `naming.py`: model/output filename helpers for ipSAE runs.
 - `af3_pairing.py`: AlphaFold 3 structure/PAE filename pairing validation.
 - `ui_helpers.py`: shared ipywidgets styling and display helpers for notebook UIs.
-- `folder_picker.py`: reusable repo-root folder dropdown + refresh controls for notebook UIs.
+- `folder_picker.py`: reusable folder dropdown + refresh controls for notebook UIs.
+- `uploads.py`: upload normalization, file saving, and safe zip extraction under `upload/`.
+- `upload_widgets.py`: reusable FileUpload / zip / uploaded-folder picker widgets.
 - `ipsae_eval_ui.py`: ipywidgets UI wiring for single-model and bulk evaluation.
 - `ipsae_comparison_ui.py`: ipywidgets UI for summarizing collected outputs into a comparison CSV.
 - `single_model_eval.py`: single-model execution, output collection, and score parsing.
 - `bulk_eval.py`: AlphaFold Server folder discovery, batch execution, and run logging.
 - `ipsae_evals_summary.py`: collected-output discovery and best-ipSAE summary CSV generation.
+- `test_uploads.py`: focused unit tests for upload saving and zip safety.
 - `README.md`: this note.
 
 The UI calls the original upstream `../ipsae.py` script; it does not replace or
@@ -46,14 +49,34 @@ Mismatches are rejected with a clear error, for example:
 AF2 and Boltz pairing checks are not enforced yet; placeholders are left for
 future extension.
 
+## File and folder uploads
+
+Uploads are stored under the project root (FreeBindCraft when IPSAE is embedded,
+or the IPSAE directory when standalone):
+
+```text
+<PROJECT_ROOT>/upload/files/          # single structure / PAE uploads
+<PROJECT_ROOT>/upload/folders/<stem>/ # extracted bulk zip uploads
+```
+
+Single Model accepts `.pdb` / `.cif` structure uploads and `.json` / `.npz` PAE
+uploads. Choosing a file fills the existing path text box with the saved path
+(same basename overwrites).
+
+Bulk Evaluation accepts a zip of an AlphaFold Server export folder. The zip is
+extracted to `upload/folders/<zip-stem>/` (existing folder with that name is
+deleted first), and the AF3 folder path text box is filled with that path.
+You can also type any server-side folder path directly. Direct folder upload is
+not supported; use zip.
+
 ## Bulk evaluation input format
 
 The notebook Bulk Evaluation tab currently supports AlphaFold Server-style AF3
 exports only. Boltz folder discovery is not supported yet; use Single Model for
 Boltz outputs.
 
-Point the tab at a parent folder containing one subfolder per complex, for
-example:
+Point the tab at a parent folder containing one subfolder per complex (type a
+path or upload a zip of that layout), for example:
 
 ```text
 AF3_outputs/
@@ -85,7 +108,7 @@ https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafol
 ## Summary comparison
 
 Summary comparison is separate from running ipSAE. Use the **Step 5: ipSAE Comparison CSV**
-cell in `notebooks/ipsae_eval.ipynb` to choose a folder that already contains collected
+cell in `notebooks/ipsae_eval.ipynb` to enter a folder path that already contains collected
 ipSAE metric outputs, such as `ipsae_evals/` or a `bulk_ipsae_evals_YYYYMMDD_HHMMSS/`
 folder. The summary ranks models by the best ipSAE row per model and can save the comparison
 table to CSV. When the CSV field is just a filename, it is saved inside the selected

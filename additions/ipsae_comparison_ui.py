@@ -9,7 +9,6 @@ Launch from notebooks/ipsae_eval.ipynb:
 
 from __future__ import annotations
 
-from folder_picker import folder_value, make_folder_picker
 from ipsae_evals_summary import resolve_summary_csv_path, summarize_ipsae_folder
 from paths import rel_repo_path
 from ui_helpers import (
@@ -40,10 +39,11 @@ def launch_ipsae_comparison_ui() -> None:
     state = {"running": False}
     cell_initialized: set[str] = set()
 
-    summary_folder, _summary_folder_refresh, summary_folder_row = make_folder_picker(
+    summary_folder = widgets.Text(
+        value="ipsae_evals",
         description="Metrics folder",
-        dropdown_width="840px",
-        placeholder_when_empty="ipsae_evals",
+        placeholder="server path to an ipSAE output folder (e.g. ipsae_evals or bulk_ipsae_evals_...)",
+        layout=widgets.Layout(width="940px"),
     )
     summary_csv = widgets.Text(
         value="ipsae_evals_summary.csv",
@@ -51,7 +51,7 @@ def launch_ipsae_comparison_ui() -> None:
         layout=widgets.Layout(width="940px"),
     )
     run_summary = widgets.Button(description="Summarize metrics", button_style="success", icon="bar-chart")
-    summary_status = widgets.HTML(value=f'<span style="{SOFT}">Ready. Choose a metrics folder, then summarize.</span>')
+    summary_status = widgets.HTML(value=f'<span style="{SOFT}">Ready. Enter a metrics folder path, then summarize.</span>')
 
     def set_summary_status(message: str, style: str = SOFT) -> None:
         summary_status.value = f'<div style="{style}">{message}</div>'
@@ -70,7 +70,7 @@ def launch_ipsae_comparison_ui() -> None:
     def on_run_summary(_button) -> None:
         if state["running"]:
             return
-        folder = folder_value(summary_folder) or "ipsae_evals"
+        folder = summary_folder.value.strip() or "ipsae_evals"
         csv_name = summary_csv.value.strip() or "ipsae_evals_summary.csv"
         state["running"] = True
         run_summary.disabled = True
@@ -101,9 +101,9 @@ def launch_ipsae_comparison_ui() -> None:
     comparison_panel = panel(
         [
             html(
-                f'<span style="{SOFT}">Select an ipSAE output folder to summarize the results.'
+                f'<span style="{SOFT}">Enter an ipSAE output folder path to summarize the results.</span>'
             ),
-            summary_folder_row,
+            summary_folder,
             summary_csv,
             run_summary,
         ]
@@ -119,7 +119,7 @@ def launch_ipsae_comparison_ui() -> None:
         )
     )
     show_summary_result(
-        "Ready. Choose an ipSAE output folder, then summarize to show results here.",
+        "Ready. Enter an ipSAE output folder path, then summarize to show results here.",
         SOFT,
     )
 
