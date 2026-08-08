@@ -63,11 +63,11 @@ Single Model accepts `.pdb` / `.cif` structure uploads and `.json` / `.npz` PAE
 uploads. Choosing a file fills the existing path text box with the saved path
 (same basename overwrites).
 
-Bulk Evaluation: for large AlphaFold Server zips, upload via the JupyterLab
+Bulk Evaluation: upload a full AlphaFold Server export zip via the JupyterLab
 file browser (left sidebar), paste the zip path into **Zip path**, and click
-**Extract zip**. The widget FileUpload path only works for tiny archives
-(Jupyter websocket limit ~10 MB); a stuck "(1)" with an empty
-`upload/folders/` means the widget transfer never reached the kernel.
+**Extract zip**. Archives are capped at 2 GB compressed / 5 GB extracted (with
+zip-slip and bomb checks). The optional widget **Upload zip** uses the same
+cap, but the file browser is more reliable for large multi-job AF3 folders.
 
 Extracted zips land in `upload/folders/<zip-stem>/` (existing folder with that
 name is deleted first). You can also type any server-side folder path directly

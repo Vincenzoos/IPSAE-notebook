@@ -11,7 +11,7 @@ from paths import UPLOAD_FOLDERS_DIR, rel_repo_path
 from ui_helpers import ERR, INFO, OK, SOFT, warning, widgets
 from uploads import (
     STRUCTURE_EXTENSIONS,
-    MAX_WIDGET_ZIP_BYTES,
+    MAX_ZIP_BYTES,
     UploadError,
     describe_upload_path,
     ensure_upload_dirs,
@@ -69,17 +69,17 @@ def make_zip_folder_upload_panel(
     *,
     on_extracted: Callable[[Path], None],
 ) -> "widgets.VBox":
-    """Build zip extract controls for bulk folder uploads.
+    """Build zip extract controls for bulk AF3 folder uploads.
 
-    Large AlphaFold Server zips should be uploaded via the JupyterLab file
-    browser, then extracted with a server path. The FileUpload widget is kept
-    only for small archives (websocket size limit).
+    Full AlphaFold Server export zips should be uploaded via the JupyterLab
+    file browser (HTTP), then extracted with a server path. Archive size is
+    capped at ``MAX_ZIP_BYTES`` (zip-slip / bomb checks still apply).
     """
     if widgets is None:
         raise RuntimeError("ipywidgets is required to create upload widgets.")
 
     ensure_upload_dirs()
-    limit_mb = MAX_WIDGET_ZIP_BYTES // (1024 * 1024)
+    limit_gb = MAX_ZIP_BYTES // (1024 * 1024 * 1024)
     state = {"busy": False}
 
     zip_path = widgets.Text(
@@ -97,13 +97,13 @@ def make_zip_folder_upload_panel(
     uploader = widgets.FileUpload(
         accept=".zip",
         multiple=False,
-        description="Small zip only",
+        description="Upload zip",
         layout=widgets.Layout(width="320px"),
     )
     status = widgets.HTML(
         value=(
-            f'<span style="{SOFT}">Recommended on Binder: upload the zip in the left file browser, '
-            "paste its path above, then Extract zip.</span>"
+            f'<span style="{SOFT}">Upload a full AF3 export zip in the left file browser '
+            f"(up to {limit_gb} GB), paste its path above, then Extract zip.</span>"
         )
     )
 
@@ -148,7 +148,7 @@ def make_zip_folder_upload_panel(
             return
         run_extract(
             lambda: extract_uploaded_zip(uploader),
-            "Receiving widget upload and extracting (small zips only)...",
+            "Receiving zip upload and extracting...",
         )
 
     extract_btn.on_click(on_extract_clicked)
@@ -157,14 +157,14 @@ def make_zip_folder_upload_panel(
     return widgets.VBox(
         [
             warning(
-                "AF3 Server export zips are often larger than the Jupyter widget upload limit "
-                f"(~{limit_mb} MB). If Upload shows (1) and nothing appears under upload/folders, "
-                "the transfer is stuck — use the file browser + Extract zip path instead."
+                "For full AF3 Server folders, use the JupyterLab file browser + Zip path / Extract zip "
+                f"(archives up to {limit_gb} GB). The widget Upload zip path loads the whole file in the "
+                "browser kernel session and can hang on large transfers — prefer the file browser."
             ),
             widgets.HBox([zip_path, extract_btn]),
             widgets.HTML(
-                f'<span style="{SOFT}">Optional: widget upload for tiny zips only '
-                f"(≤{limit_mb} MB).</span>"
+                f'<span style="{SOFT}">Optional: Upload zip widget (same {limit_gb} GB archive cap; '
+                "file browser is more reliable for large AF3 exports).</span>"
             ),
             uploader,
             status,

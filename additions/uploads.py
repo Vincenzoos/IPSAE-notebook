@@ -14,13 +14,11 @@ STRUCTURE_EXTENSIONS = frozenset({".pdb", ".cif"})
 PAE_EXTENSIONS = frozenset({".json", ".npz"})
 ZIP_EXTENSIONS = frozenset({".zip"})
 
+# Caps sized for full AlphaFold Server export folders (multi-job zips).
 MAX_ZIP_BYTES = 2 * 1024 * 1024 * 1024
 MAX_EXTRACTED_BYTES = 5 * 1024 * 1024 * 1024
 MAX_ARCHIVE_FILES = 20000
 MAX_SINGLE_FILE_BYTES = 1024 * 1024 * 1024
-# ipywidgets FileUpload sends the whole file over the Jupyter websocket
-# (default ~10 MB). Larger AF3 zips hang with "(1)" and never reach the kernel.
-MAX_WIDGET_ZIP_BYTES = 8 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -128,8 +126,8 @@ def extract_zip_file(zip_path: str | Path) -> Path:
     """Extract a server-side .zip into ``upload/folders/<zip-stem>``.
 
     Prefer this for AlphaFold Server exports: upload the zip with the
-    JupyterLab file browser (HTTP), then pass the path here. That avoids the
-    ipywidgets FileUpload websocket size limit that hangs large archives.
+    JupyterLab file browser (HTTP), then pass the path here. That path
+    supports full multi-job AF3 folders up to ``MAX_ZIP_BYTES``.
     """
     ensure_upload_dirs()
     path = resolve_repo_path(zip_path)
@@ -141,7 +139,7 @@ def extract_zip_file(zip_path: str | Path) -> Path:
     if path.stat().st_size > MAX_ZIP_BYTES:
         raise UploadError(
             f"Zip {path.name!r} exceeds max size "
-            f"({MAX_ZIP_BYTES // (1024 * 1024 * 1024)} GB)."
+            f"({_format_bytes(MAX_ZIP_BYTES)})."
         )
 
     stem = _safe_folder_name(path.stem)
@@ -174,17 +172,11 @@ def extract_uploaded_zip(upload_widget) -> Path:
     if ext not in ZIP_EXTENSIONS:
         raise UploadError(f"Only .zip uploads are accepted (got {basename!r}).")
     payload_size = max(int(item.size), len(item.content))
-    if payload_size > MAX_WIDGET_ZIP_BYTES:
-        limit_mb = MAX_WIDGET_ZIP_BYTES // (1024 * 1024)
-        raise UploadError(
-            f"Zip {basename!r} is too large for the widget uploader "
-            f"({payload_size // (1024 * 1024)} MB > {limit_mb} MB). "
-            "On Binder/JupyterLab: upload the zip via the left file browser, "
-            "then use Extract zip with the server path."
-        )
     if payload_size > MAX_ZIP_BYTES:
         raise UploadError(
-            f"Zip {basename!r} exceeds max size ({MAX_ZIP_BYTES // (1024 * 1024 * 1024)} GB)."
+            f"Zip {basename!r} exceeds max size ({_format_bytes(MAX_ZIP_BYTES)}). "
+            "On Binder/JupyterLab: upload large AF3 zips via the left file browser, "
+            "then use Extract zip with the server path."
         )
 
     zip_path = UPLOAD_FILES_DIR / basename
@@ -202,7 +194,7 @@ def safe_extract_zip(zip_path: Path, dest_dir: Path) -> None:
         raise UploadError(f"Zip not found: {zip_path}")
     if zip_path.stat().st_size > MAX_ZIP_BYTES:
         raise UploadError(
-            f"Zip exceeds max size ({MAX_ZIP_BYTES // (1024 * 1024 * 1024)} GB)."
+            f"Zip exceeds max size ({_format_bytes(MAX_ZIP_BYTES)})."
         )
 
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -279,6 +271,17 @@ def _as_bytes(content) -> bytes:
     if isinstance(content, str):
         return content.encode("utf-8")
     return bytes(content)
+
+
+def _format_bytes(n: int) -> str:
+    """Human-readable size for error messages (GB when large)."""
+    if n >= 1024 * 1024 * 1024:
+        gb = n / (1024 * 1024 * 1024)
+        text = f"{gb:.0f}" if gb == int(gb) else f"{gb:.1f}"
+        return f"{text} GB"
+    if n >= 1024 * 1024:
+        return f"{n // (1024 * 1024)} MB"
+    return f"{n} bytes"
 
 
 def _normalize_ext(ext: str) -> str:
@@ -366,7 +369,6 @@ __all__ = [
     "extract_zip_file",
     "extract_uploaded_zip",
     "safe_extract_zip",
-    "MAX_WIDGET_ZIP_BYTES",
     "list_uploaded_folders",
     "uploaded_folder_path",
     "describe_upload_path",

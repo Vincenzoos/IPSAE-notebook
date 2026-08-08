@@ -13,7 +13,7 @@ Interactive evaluation UI (`ipsae_eval.ipynb`) for single-model and bulk AlphaFo
 https://mybinder.org/v2/gh/Vincenzoos/IPSAE-notebook/main?urlpath=lab/tree/ipsae_eval.ipynb
 ```
 
-On Binder, open `ipsae_eval.ipynb`, run **Package Installation**, then the evaluation cells. Upload structure/PAE files in the UI (zip a folder for bulk). Use the zip helper cell to package outputs for download. The first Binder launch builds the environment and can take several minutes.
+On Binder, open `ipsae_eval.ipynb`, run **Package Installation**, then the evaluation cells. Upload structure/PAE files in the UI; for bulk AF3 folders, upload the zip via the JupyterLab file browser then Extract zip (up to 2 GB). Use the zip helper cell to package outputs for download. The first Binder launch builds the environment and can take several minutes.
 
 **Also available (quick try; tall widget UI may clip):**
 
