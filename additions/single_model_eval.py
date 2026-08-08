@@ -62,7 +62,8 @@ def parse_ipsae_scores(score_file: str | Path) -> pd.DataFrame:
     scores = pd.DataFrame(rows, columns=columns)
     for column in scores.columns:
         if column not in {"Chn1", "Chn2", "Type", "Model"}:
-            scores[column] = pd.to_numeric(scores[column], errors="ignore")
+            # pandas 3 removed errors="ignore"; coerce keeps non-numeric as NaN.
+            scores[column] = pd.to_numeric(scores[column], errors="coerce")
     return scores
 
 
