@@ -90,7 +90,7 @@ def launch_ipsae_eval_ui() -> None:
     bulk_folder_path = widgets.Text(
         value="",
         description="AF3 folder",
-        placeholder="server path to AlphaFold Server export folder, or upload a zip below",
+        placeholder="server path to AF3 export folder (or extract a zip below first)",
         layout=widgets.Layout(width="940px"),
     )
     bulk_model_index = widgets.IntText(value=0, description="Model", layout=widgets.Layout(width="180px"))
@@ -144,8 +144,9 @@ def launch_ipsae_eval_ui() -> None:
         [
             html(
                 f'<span style="{SOFT}">Select an AlphaFold Server output folder already on the server, '
-                "or upload a zip of that folder. The UI will discover matching "
-                "model_N CIF files and full_data_N JSON files across all complex subfolders before running.</span>"
+                "or upload a zip via the JupyterLab file browser and Extract zip below. "
+                "The UI will discover matching model_N CIF files and full_data_N JSON files "
+                "across all complex subfolders before running.</span>"
             ),
             warning("Boltz folder structure is not supported in bulk mode yet. Use Single Model for Boltz, or provide an AlphaFold Server-style export folder here."),
             example(

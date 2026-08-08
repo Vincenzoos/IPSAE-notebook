@@ -65,6 +65,26 @@ class UploadTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(second.read_bytes(), b"v2")
 
+    def test_extract_zip_file_from_server_path(self) -> None:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("fold_a/fold_a_model_0.cif", "data_")
+            zf.writestr("fold_a/fold_a_full_data_0.json", "{}")
+        zip_path = self.root / "AF3_outputs.zip"
+        zip_path.write_bytes(buf.getvalue())
+        dest = uploads.extract_zip_file(zip_path)
+        self.assertEqual(dest, (self.folders_dir / "AF3_outputs").resolve())
+        self.assertTrue((dest / "fold_a" / "fold_a_model_0.cif").is_file())
+
+    def test_widget_zip_rejects_over_websocket_limit(self) -> None:
+        big = b"x" * (uploads.MAX_WIDGET_ZIP_BYTES + 1)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("fold_a/model.cif", big)
+        with self.assertRaises(uploads.UploadError) as ctx:
+            uploads.extract_uploaded_zip(_v8_upload("too_big.zip", buf.getvalue()))
+        self.assertIn("file browser", str(ctx.exception).lower())
+
     def test_extract_zip_to_folders_stem(self) -> None:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:

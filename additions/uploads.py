@@ -8,7 +8,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from paths import UPLOAD_DIR, UPLOAD_FILES_DIR, UPLOAD_FOLDERS_DIR, rel_repo_path
+from paths import UPLOAD_DIR, UPLOAD_FILES_DIR, UPLOAD_FOLDERS_DIR, rel_repo_path, resolve_repo_path
 
 STRUCTURE_EXTENSIONS = frozenset({".pdb", ".cif"})
 PAE_EXTENSIONS = frozenset({".json", ".npz"})
@@ -18,6 +18,9 @@ MAX_ZIP_BYTES = 2 * 1024 * 1024 * 1024
 MAX_EXTRACTED_BYTES = 5 * 1024 * 1024 * 1024
 MAX_ARCHIVE_FILES = 20000
 MAX_SINGLE_FILE_BYTES = 1024 * 1024 * 1024
+# ipywidgets FileUpload sends the whole file over the Jupyter websocket
+# (default ~10 MB). Larger AF3 zips hang with "(1)" and never reach the kernel.
+MAX_WIDGET_ZIP_BYTES = 8 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -121,6 +124,41 @@ def save_single_upload(upload_widget, kind: str) -> Path:
     return paths[0]
 
 
+def extract_zip_file(zip_path: str | Path) -> Path:
+    """Extract a server-side .zip into ``upload/folders/<zip-stem>``.
+
+    Prefer this for AlphaFold Server exports: upload the zip with the
+    JupyterLab file browser (HTTP), then pass the path here. That avoids the
+    ipywidgets FileUpload websocket size limit that hangs large archives.
+    """
+    ensure_upload_dirs()
+    path = resolve_repo_path(zip_path)
+    if not path.is_file():
+        raise UploadError(f"Zip not found: {path}")
+    ext = _normalize_ext(path.suffix)
+    if ext not in ZIP_EXTENSIONS:
+        raise UploadError(f"Only .zip archives are accepted (got {path.name!r}).")
+    if path.stat().st_size > MAX_ZIP_BYTES:
+        raise UploadError(
+            f"Zip {path.name!r} exceeds max size "
+            f"({MAX_ZIP_BYTES // (1024 * 1024 * 1024)} GB)."
+        )
+
+    stem = _safe_folder_name(path.stem)
+    dest = UPLOAD_FOLDERS_DIR / stem
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True, exist_ok=False)
+    try:
+        safe_extract_zip(path, dest)
+        _unwrap_matching_top_dir(dest, stem)
+    except Exception:
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
+        raise
+    return dest.resolve()
+
+
 def extract_uploaded_zip(upload_widget) -> Path:
     """Save one uploaded zip and extract it to upload/folders/<zip-stem>."""
     ensure_upload_dirs()
@@ -135,27 +173,23 @@ def extract_uploaded_zip(upload_widget) -> Path:
     ext = _normalize_ext(Path(basename).suffix)
     if ext not in ZIP_EXTENSIONS:
         raise UploadError(f"Only .zip uploads are accepted (got {basename!r}).")
-    if item.size > MAX_ZIP_BYTES or len(item.content) > MAX_ZIP_BYTES:
+    payload_size = max(int(item.size), len(item.content))
+    if payload_size > MAX_WIDGET_ZIP_BYTES:
+        limit_mb = MAX_WIDGET_ZIP_BYTES // (1024 * 1024)
+        raise UploadError(
+            f"Zip {basename!r} is too large for the widget uploader "
+            f"({payload_size // (1024 * 1024)} MB > {limit_mb} MB). "
+            "On Binder/JupyterLab: upload the zip via the left file browser, "
+            "then use Extract zip with the server path."
+        )
+    if payload_size > MAX_ZIP_BYTES:
         raise UploadError(
             f"Zip {basename!r} exceeds max size ({MAX_ZIP_BYTES // (1024 * 1024 * 1024)} GB)."
         )
 
-    stem = _safe_folder_name(Path(basename).stem)
-    dest = UPLOAD_FOLDERS_DIR / stem
-    if dest.exists():
-        shutil.rmtree(dest)
-    dest.mkdir(parents=True, exist_ok=False)
-
     zip_path = UPLOAD_FILES_DIR / basename
     zip_path.write_bytes(item.content)
-    try:
-        safe_extract_zip(zip_path, dest)
-        _unwrap_matching_top_dir(dest, stem)
-    except Exception:
-        if dest.exists():
-            shutil.rmtree(dest, ignore_errors=True)
-        raise
-    return dest.resolve()
+    return extract_zip_file(zip_path)
 
 
 def safe_extract_zip(zip_path: Path, dest_dir: Path) -> None:
@@ -329,8 +363,10 @@ __all__ = [
     "uploaded_items",
     "save_uploaded_file",
     "save_single_upload",
+    "extract_zip_file",
     "extract_uploaded_zip",
     "safe_extract_zip",
+    "MAX_WIDGET_ZIP_BYTES",
     "list_uploaded_folders",
     "uploaded_folder_path",
     "describe_upload_path",

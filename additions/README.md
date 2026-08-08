@@ -63,11 +63,15 @@ Single Model accepts `.pdb` / `.cif` structure uploads and `.json` / `.npz` PAE
 uploads. Choosing a file fills the existing path text box with the saved path
 (same basename overwrites).
 
-Bulk Evaluation accepts a zip of an AlphaFold Server export folder. The zip is
-extracted to `upload/folders/<zip-stem>/` (existing folder with that name is
-deleted first), and the AF3 folder path text box is filled with that path.
-You can also type any server-side folder path directly. Direct folder upload is
-not supported; use zip.
+Bulk Evaluation: for large AlphaFold Server zips, upload via the JupyterLab
+file browser (left sidebar), paste the zip path into **Zip path**, and click
+**Extract zip**. The widget FileUpload path only works for tiny archives
+(Jupyter websocket limit ~10 MB); a stuck "(1)" with an empty
+`upload/folders/` means the widget transfer never reached the kernel.
+
+Extracted zips land in `upload/folders/<zip-stem>/` (existing folder with that
+name is deleted first). You can also type any server-side folder path directly
+into **AF3 folder**. Direct folder upload is not supported; use zip.
 
 ## Bulk evaluation input format
 

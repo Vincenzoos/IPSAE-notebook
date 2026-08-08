@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+mkdir -p "${HOME}/.jupyter"
+cp "${PWD}/binder/jupyter_server_config.py" "${HOME}/.jupyter/jupyter_server_config.py"
