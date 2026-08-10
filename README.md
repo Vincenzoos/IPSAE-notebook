@@ -1,9 +1,25 @@
-# IPSAE
+# IPSAE Notebook
 Scoring function for interprotein interactions in AlphaFold2 and AlphaFold3
+
+
+Original upstream: https://github.com/DunbrackLab/IPSAE
 
 # Notebook (Binder / Colab)
 
-Interactive evaluation UI (`ipsae_eval.ipynb`) for single-model and bulk AlphaFold Server outputs.
+Interactive evaluation UI (`ipsae_eval.ipynb`) for single-model and bulk scoring of
+AlphaFold2, AlphaFold Server (AF3), and Boltz outputs.
+
+**v1 support**
+
+| Model type | Single Model | Bulk Evaluation |
+|---|---:|---:|
+| AlphaFold2 | Yes | No |
+| AlphaFold3 Server | Yes | Yes |
+| Boltz | Yes | Yes |
+
+Single Model requires an explicit model type. Bulk auto-detects AF3 Server or Boltz
+from folder contents (AF2 bulk is not supported). See `additions/README.md` for
+exact naming contracts.
 
 **Recommended (full widget UI):**
 
@@ -13,7 +29,7 @@ Interactive evaluation UI (`ipsae_eval.ipynb`) for single-model and bulk AlphaFo
 https://mybinder.org/v2/gh/Vincenzoos/IPSAE-notebook/main?urlpath=lab/tree/ipsae_eval.ipynb
 ```
 
-On Binder, open `ipsae_eval.ipynb`, run **Package Installation**, then the evaluation cells. Upload structure/PAE files in the UI; for bulk AF3 folders, upload the zip via the JupyterLab file browser then Extract zip (up to 2 GB). Use the zip helper cell to package outputs for download. The first Binder launch builds the environment and can take several minutes.
+On Binder, open `ipsae_eval.ipynb`, run **Package Installation**, then the evaluation cells. Upload structure/PAE files in the UI; for bulk AF3 Server or Boltz folders, upload the zip via the JupyterLab file browser then Extract zip (up to 2 GB). Use the zip helper cell to package outputs for download. The first Binder launch builds the environment and can take several minutes.
 
 **Also available (quick try; tall widget UI may clip):**
 
@@ -44,6 +60,27 @@ Boltz1:
      python ipsae.py <path_to_boltz1_pae_npz_file> <path_to_boltz1_cif_file> <pae_cutoff> <dist_cutoff>
      python ipsae.py pae_AURKA_TPX2_model_0.npz  AURKA_TPX2_model_0.cif 10 10
 
+# Notebook filename conventions (UI validation)
+
+The UI requires the lowercase filename extensions shown below because `ipsae.py`
+uses case-sensitive format dispatch.
+
+AlphaFold2 (Single Model only):
+
+- `<complex>_unrelaxed_rank_<rank>_<details>.pdb`
+- `<complex>_scores_rank_<rank>_<details>.json`
+
+AlphaFold Server / AF3 (Single + Bulk):
+
+- `<complex>_model_<N>.cif`
+- `<complex>_full_data_<N>.json`
+- optional `<complex>_summary_confidences_<N>.json`
+
+Boltz (Single + Bulk):
+
+- `<complex>_model_<N>.pdb` or `.cif`
+- `pae_<complex>_model_<N>.npz`
+- optional `confidence_<complex>_model_<N>.json`
 
 # Output chain-chain score file
 

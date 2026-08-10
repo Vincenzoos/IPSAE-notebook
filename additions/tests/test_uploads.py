@@ -59,6 +59,10 @@ class UploadTests(unittest.TestCase):
         with self.assertRaises(uploads.UploadError):
             uploads.save_single_upload(_v8_upload("notes.txt", b"nope"), "structure")
 
+    def test_reject_uppercase_model_extension(self) -> None:
+        with self.assertRaises(uploads.UploadError):
+            uploads.save_single_upload(_v8_upload("model.CIF", b"data_"), "structure")
+
     def test_overwrite_same_basename(self) -> None:
         first = uploads.save_single_upload(_v8_upload("model.cif", b"v1"), "structure")
         second = uploads.save_single_upload(_v8_upload("model.cif", b"v2"), "structure")

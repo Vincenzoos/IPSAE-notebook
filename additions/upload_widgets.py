@@ -22,20 +22,30 @@ from uploads import (
 )
 
 
+def _accept_string(allowed_extensions: set[str] | frozenset[str]) -> str:
+    return ",".join(
+        sorted({ext if ext.startswith(".") else f".{ext}" for ext in allowed_extensions})
+    )
+
+
 def make_single_file_upload_row(
     *,
     description: str,
     allowed_extensions: set[str] | frozenset[str],
     on_saved: Callable[[Path], None],
-) -> "widgets.VBox":
-    """Build a FileUpload row that saves one file and calls on_saved(path)."""
+) -> tuple["widgets.VBox", Callable[[set[str] | frozenset[str]], None]]:
+    """Build a FileUpload row that saves one file and calls on_saved(path).
+
+    Returns ``(widget, set_allowed_extensions)`` so callers can update accept
+    filters when the selected model type changes.
+    """
     if widgets is None:
         raise RuntimeError("ipywidgets is required to create upload widgets.")
 
     ensure_upload_dirs()
-    accept = ",".join(sorted({ext if ext.startswith(".") else f".{ext}" for ext in allowed_extensions}))
+    state = {"allowed": set(allowed_extensions)}
     uploader = widgets.FileUpload(
-        accept=accept,
+        accept=_accept_string(state["allowed"]),
         multiple=False,
         description=description,
         layout=widgets.Layout(width="320px"),
@@ -47,12 +57,16 @@ def make_single_file_upload_row(
     def set_status(message: str, style: str = SOFT) -> None:
         status.value = f'<div style="{style}">{message}</div>'
 
+    def set_allowed_extensions(extensions: set[str] | frozenset[str]) -> None:
+        state["allowed"] = set(extensions)
+        uploader.accept = _accept_string(state["allowed"])
+
     def on_upload(change=None) -> None:
         if not uploader.value:
             return
         set_status("Saving upload...", INFO)
         try:
-            paths = save_uploaded_file(uploader, UPLOAD_FILES_DIR, set(allowed_extensions))
+            paths = save_uploaded_file(uploader, UPLOAD_FILES_DIR, set(state["allowed"]))
             if len(paths) != 1:
                 raise UploadError("Upload exactly one file.")
             path = paths[0]
@@ -62,18 +76,18 @@ def make_single_file_upload_row(
             set_status(f"Upload failed: {exc}", ERR)
 
     uploader.observe(on_upload, names="value")
-    return widgets.VBox([widgets.HBox([uploader]), status])
+    return widgets.VBox([widgets.HBox([uploader]), status]), set_allowed_extensions
 
 
 def make_zip_folder_upload_panel(
     *,
     on_extracted: Callable[[Path], None],
 ) -> "widgets.VBox":
-    """Build zip extract controls for bulk AF3 folder uploads.
+    """Build zip extract controls for bulk model-output folder uploads.
 
-    Full AlphaFold Server export zips should be uploaded via the JupyterLab
-    file browser (HTTP), then extracted with a server path. Archive size is
-    capped at ``MAX_ZIP_BYTES`` (zip-slip / bomb checks still apply).
+    Full export zips should be uploaded via the JupyterLab file browser (HTTP),
+    then extracted with a server path. Archive size is capped at
+    ``MAX_ZIP_BYTES`` (zip-slip / bomb checks still apply).
     """
     if widgets is None:
         raise RuntimeError("ipywidgets is required to create upload widgets.")
@@ -85,7 +99,7 @@ def make_zip_folder_upload_panel(
     zip_path = widgets.Text(
         value="",
         description="Zip path",
-        placeholder="e.g. AF3_outputs.zip or upload/files/AF3_outputs.zip",
+        placeholder="e.g. model_outputs.zip or upload/files/model_outputs.zip",
         layout=widgets.Layout(width="760px"),
     )
     extract_btn = widgets.Button(
@@ -102,7 +116,7 @@ def make_zip_folder_upload_panel(
     )
     status = widgets.HTML(
         value=(
-            f'<span style="{SOFT}">Upload a full AF3 export zip in the left file browser '
+            f'<span style="{SOFT}">Upload an AF3 Server or Boltz export zip in the left file browser '
             f"(up to {limit_gb} GB), paste its path above, then Extract zip.</span>"
         )
     )
@@ -157,14 +171,14 @@ def make_zip_folder_upload_panel(
     return widgets.VBox(
         [
             warning(
-                "For full AF3 Server folders, use the JupyterLab file browser + Zip path / Extract zip "
+                "For full AF3 Server or Boltz folders, use the JupyterLab file browser + Zip path / Extract zip "
                 f"(archives up to {limit_gb} GB). The widget Upload zip path loads the whole file in the "
                 "browser kernel session and can hang on large transfers — prefer the file browser."
             ),
             widgets.HBox([zip_path, extract_btn]),
             widgets.HTML(
                 f'<span style="{SOFT}">Optional: Upload zip widget (same {limit_gb} GB archive cap; '
-                "file browser is more reliable for large AF3 exports).</span>"
+                "file browser is more reliable for large exports).</span>"
             ),
             uploader,
             status,

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from af3_pairing import validate_structure_pae_pairing
+from model_pairing import ModelType, parse_model_type, validate_structure_pae_pairing
 from naming import ipsae_output_files, safe_name
 from paths import DEFAULT_EVALS_DIR, IPSAE_SCRIPT, ROOT, rel_repo_path, resolve_repo_path
 
@@ -20,8 +20,13 @@ class IpsaeJob:
     label: str
     pae_file: Path
     structure_file: Path
+    model_type: ModelType | str
     pae_cutoff: float = 10.0
     dist_cutoff: float = 10.0
+    summary_file: Path | None = None
+
+    def resolved_model_type(self) -> ModelType:
+        return parse_model_type(self.model_type)
 
 
 def collect_ipsae_outputs(
@@ -72,16 +77,23 @@ def run_ipsae(
     overwrite: bool = False,
     collect_outputs: bool = False,
     output_dir: str | Path = DEFAULT_EVALS_DIR,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, str | None]:
     pae_file = resolve_repo_path(job.pae_file)
     structure_file = resolve_repo_path(job.structure_file)
-    if not pae_file.exists():
-        raise FileNotFoundError(f"PAE/confidence file not found: {pae_file}")
-    if not structure_file.exists():
-        raise FileNotFoundError(f"Structure file not found: {structure_file}")
+    summary_file = resolve_repo_path(job.summary_file) if job.summary_file else None
+    model_type = job.resolved_model_type()
     if not IPSAE_SCRIPT.exists():
         raise FileNotFoundError(f"IPSAE script not found: {IPSAE_SCRIPT}")
-    validate_structure_pae_pairing(structure_file, pae_file)
+
+    validation = validate_structure_pae_pairing(
+        structure_file,
+        pae_file,
+        model_type,
+        summary_file=summary_file,
+        require_exists=True,
+    )
+    warning = validation.get("warning")
+    resolved_summary = validation.get("summary_file")
 
     outputs = ipsae_output_files(structure_file, job.pae_cutoff, job.dist_cutoff)
     if outputs["scores"].exists() and not overwrite:
@@ -107,9 +119,14 @@ def run_ipsae(
     if "Model" in scores.columns:
         scores = scores.drop(columns=["Model"])
     scores.insert(0, "Model", job.label)
-    scores.insert(1, "PAE_File", rel_repo_path(pae_file))
-    scores.insert(2, "Structure_File", rel_repo_path(structure_file))
-    scores.insert(3, "Score_File", rel_repo_path(score_file))
+    scores.insert(1, "Model_Type", model_type.value)
+    scores.insert(2, "PAE_File", rel_repo_path(pae_file))
+    scores.insert(3, "Structure_File", rel_repo_path(structure_file))
+    scores.insert(4, "Score_File", rel_repo_path(score_file))
+    insert_at = 5
+    if resolved_summary is not None:
+        scores.insert(insert_at, "Summary_File", rel_repo_path(resolved_summary))
+        insert_at += 1
     if copied:
-        scores.insert(4, "Eval_Output_Dir", rel_repo_path(resolve_repo_path(output_dir)))
-    return scores
+        scores.insert(insert_at, "Eval_Output_Dir", rel_repo_path(resolve_repo_path(output_dir)))
+    return scores, warning

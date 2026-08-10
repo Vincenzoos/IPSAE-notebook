@@ -12,6 +12,7 @@ from paths import UPLOAD_DIR, UPLOAD_FILES_DIR, UPLOAD_FOLDERS_DIR, rel_repo_pat
 
 STRUCTURE_EXTENSIONS = frozenset({".pdb", ".cif"})
 PAE_EXTENSIONS = frozenset({".json", ".npz"})
+SUMMARY_EXTENSIONS = frozenset({".json"})
 ZIP_EXTENSIONS = frozenset({".zip"})
 
 # Caps sized for full AlphaFold Server export folders (multi-job zips).
@@ -89,7 +90,9 @@ def save_uploaded_file(
         basename = Path(item.name).name
         if not basename or basename in {".", ".."}:
             raise UploadError(f"Invalid upload filename: {item.name!r}")
-        ext = _normalize_ext(Path(basename).suffix)
+        # ipSAE's CLI dispatch is case-sensitive, so preserve and validate the
+        # uploaded filename's actual suffix rather than normalizing it.
+        ext = Path(basename).suffix
         if ext not in allowed:
             allowed_list = ", ".join(sorted(allowed))
             raise UploadError(
@@ -107,14 +110,18 @@ def save_uploaded_file(
 
 
 def save_single_upload(upload_widget, kind: str) -> Path:
-    """Save exactly one structure or PAE file to upload/files and return its path."""
+    """Save exactly one structure, PAE, or summary file to upload/files."""
     kind_key = str(kind).strip().lower()
     if kind_key == "structure":
         allowed = STRUCTURE_EXTENSIONS
     elif kind_key == "pae":
         allowed = PAE_EXTENSIONS
+    elif kind_key in {"summary", "boltz_summary"}:
+        allowed = SUMMARY_EXTENSIONS
     else:
-        raise UploadError(f"Unknown upload kind: {kind!r}. Use 'structure' or 'pae'.")
+        raise UploadError(
+            f"Unknown upload kind: {kind!r}. Use 'structure', 'pae', or 'summary'."
+        )
 
     paths = save_uploaded_file(upload_widget, UPLOAD_FILES_DIR, allowed)
     if len(paths) != 1:
@@ -356,6 +363,7 @@ __all__ = [
     "UPLOAD_FOLDERS_DIR",
     "STRUCTURE_EXTENSIONS",
     "PAE_EXTENSIONS",
+    "SUMMARY_EXTENSIONS",
     "MAX_ZIP_BYTES",
     "MAX_EXTRACTED_BYTES",
     "MAX_ARCHIVE_FILES",

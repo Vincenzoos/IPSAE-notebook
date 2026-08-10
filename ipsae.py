@@ -463,7 +463,17 @@ if boltz:
     # plddt_AURKA_TPX2_model_0.npz
 
 
-    plddt_file_path=pae_file_path.replace("pae","plddt")
+    # Transform only the PAE filename so parent directories containing "pae" are unchanged.
+    # pae_<base>.npz -> plddt_<base>.npz / confidence_<base>.json
+    pae_dir = os.path.dirname(pae_file_path)
+    pae_name = os.path.basename(pae_file_path)
+    if pae_name.startswith("pae_") and pae_name.endswith(".npz"):
+        boltz_base = pae_name[len("pae_"):-len(".npz")]
+        plddt_file_path = os.path.join(pae_dir, f"plddt_{boltz_base}.npz") if pae_dir else f"plddt_{boltz_base}.npz"
+        summary_file_path = os.path.join(pae_dir, f"confidence_{boltz_base}.json") if pae_dir else f"confidence_{boltz_base}.json"
+    else:
+        print("Boltz PAE filename must match pae_<complex>_model_N.npz: ", pae_file_path)
+        sys.exit(1)
     if os.path.exists(plddt_file_path):
         data_plddt = np.load(plddt_file_path)
 
@@ -489,26 +499,20 @@ if boltz:
         print("Boltz PAE file does not exist: ", pae_file_path)
         sys.exit()
 
-    summary_file_path=pae_file_path.replace("pae","confidence")
-    summary_file_path=summary_file_path.replace(".npz",".json")
     iptm_boltz=   {chain1: {chain2: 0     for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
     if os.path.exists(summary_file_path):
         with open(summary_file_path, 'r') as file:
             data_summary = json.load(file)
 
-            if 'pair_chains_iptm' in data_summary:
-                boltz_chain_pair_iptm_data=data_summary['pair_chains_iptm']
-            else:
+            boltz_chain_pair_iptm_data=data_summary.get('pair_chains_iptm')
+            if boltz_chain_pair_iptm_data is None:
                 # Boltz missing key fallback
                 print(f"Warning: 'pair_chains_iptm' key not found in {summary_file_path}. ipTM scores will be 0.")
-                boltz_chain_pair_iptm_data = {}
-
-            
-            boltz_chain_pair_iptm_data=data_summary['pair_chains_iptm']
-            for nchain1, chain1 in enumerate(unique_chains):
-                for nchain2, chain2 in enumerate(unique_chains):
-                    if chain1 == chain2: continue
-                    iptm_boltz[chain1][chain2]=boltz_chain_pair_iptm_data[str(nchain1)][str(nchain2)]
+            else:
+                for nchain1, chain1 in enumerate(unique_chains):
+                    for nchain2, chain2 in enumerate(unique_chains):
+                        if chain1 == chain2: continue
+                        iptm_boltz[chain1][chain2]=boltz_chain_pair_iptm_data[str(nchain1)][str(nchain2)]
     else:
         print("Boltz summary file does not exist: ", summary_file_path)
 
