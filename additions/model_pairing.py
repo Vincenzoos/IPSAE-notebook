@@ -162,7 +162,7 @@ def boltz_companion_paths(pae_file: str | Path) -> tuple[Path, Path]:
     """
     pae_path = Path(pae_file)
     name = pae_path.name
-    if not (name.startswith("pae_") and name.endswith(".npz")):
+    if pae_path.suffix != ".npz" or BOLTZ_PAE_RE.match(pae_path.stem) is None:
         raise ValueError(
             "Boltz PAE file must be named like 'pae_<complex>_model_N.npz'. "
             f"Got '{name}'."

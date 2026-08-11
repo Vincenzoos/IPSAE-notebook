@@ -26,6 +26,7 @@ from single_model_ui_state import (
     maybe_prefill_boltz_summary,
     placeholders_for,
     selected_model_type,
+    single_inputs_locked,
     single_run_ready,
     upload_extensions_for,
 )
@@ -37,10 +38,14 @@ from ui_helpers import (
     banner,
     clear_output,
     display,
+    enable_colab_iframe_resize,
     example,
     html,
     publish_cell,
+    responsive_layout,
+    scrollable_ui_layout,
     warning,
+    wrapping_row,
     widgets,
     HTML,
 )
@@ -64,6 +69,7 @@ def launch_ipsae_eval_ui() -> None:
 
     # Replace any previously rendered copy of this UI when the notebook cell is rerun.
     clear_output(wait=True)
+    enable_colab_iframe_resize()
     ensure_upload_dirs()
 
     status = widgets.HTML(value=f'<span style="{SOFT}">Ready. Choose single or bulk evaluation, then run ipSAE.</span>')
@@ -78,12 +84,16 @@ def launch_ipsae_eval_ui() -> None:
 
     pae_cutoff = widgets.FloatText(value=10.0, description="PAE cutoff", layout=widgets.Layout(width="220px"))
     dist_cutoff = widgets.FloatText(value=10.0, description="Dist cutoff", layout=widgets.Layout(width="220px"))
-    collect_outputs = widgets.Checkbox(value=False, description="Copy outputs to separate folder")
+    collect_outputs = widgets.Checkbox(
+        value=False,
+        description="Copy outputs to separate folder",
+        disabled=True,
+    )
     output_dir = widgets.Text(
         value="ipsae_evals",
         description="Output dir",
         disabled=True,
-        layout=widgets.Layout(width="700px"),
+        layout=responsive_layout("700px"),
     )
 
     model_type = widgets.Dropdown(
@@ -94,27 +104,36 @@ def launch_ipsae_eval_ui() -> None:
     )
     type_hint = widgets.HTML(
         value=f'<div style="{SOFT}">{hint_text_for(None)}</div>',
-        layout=widgets.Layout(width="660px"),
+        layout=responsive_layout("660px"),
     )
 
-    label = widgets.Text(value="", description="Label", placeholder="defaults to structure filename", layout=widgets.Layout(width="520px"))
+    label = widgets.Text(
+        value="",
+        description="Label",
+        placeholder="defaults to structure filename",
+        disabled=True,
+        layout=responsive_layout("520px"),
+    )
     structure_path = widgets.Text(
         value="",
         description="Structure",
         placeholder=placeholders_for(None)["structure"],
-        layout=widgets.Layout(width="940px"),
+        disabled=True,
+        layout=responsive_layout(),
     )
     pae_path = widgets.Text(
         value="",
         description="PAE",
         placeholder=placeholders_for(None)["pae"],
-        layout=widgets.Layout(width="940px"),
+        disabled=True,
+        layout=responsive_layout(),
     )
     summary_path = widgets.Text(
         value="",
         description="Boltz summary",
         placeholder=placeholders_for(None)["summary"],
-        layout=widgets.Layout(width="940px"),
+        disabled=True,
+        layout=responsive_layout(),
     )
     run_single = widgets.Button(description="Run ipSAE", button_style="primary", icon="play", disabled=True)
     discover_bulk = widgets.Button(description="Find models", button_style="info", icon="search", disabled=True)
@@ -124,7 +143,7 @@ def launch_ipsae_eval_ui() -> None:
         value="",
         description="Folder",
         placeholder="server path to AF3 Server or Boltz export folder (or extract a zip below first)",
-        layout=widgets.Layout(width="940px"),
+        layout=responsive_layout(),
     )
     bulk_model_index = widgets.BoundedIntText(
         value=0,
@@ -147,20 +166,23 @@ def launch_ipsae_eval_ui() -> None:
         summary_path.value = path_for_textbox(path)
         sync_single_controls(state["running"])
 
-    structure_upload, set_structure_ext = make_single_file_upload_row(
+    structure_upload, set_structure_ext, set_structure_disabled = make_single_file_upload_row(
         description="Upload structure",
         allowed_extensions=upload_extensions_for(None)["structure"],
         on_saved=on_structure_saved,
+        disabled=True,
     )
-    pae_upload, set_pae_ext = make_single_file_upload_row(
+    pae_upload, set_pae_ext, set_pae_disabled = make_single_file_upload_row(
         description="Upload PAE",
         allowed_extensions=upload_extensions_for(None)["pae"],
         on_saved=on_pae_saved,
+        disabled=True,
     )
-    summary_upload, set_summary_ext = make_single_file_upload_row(
+    summary_upload, set_summary_ext, set_summary_disabled = make_single_file_upload_row(
         description="Upload Boltz summary",
         allowed_extensions=upload_extensions_for(None)["summary"],
         on_saved=on_summary_saved,
+        disabled=True,
     )
     summary_box = widgets.VBox([summary_path, summary_upload])
     summary_box.layout.display = "none"
@@ -171,7 +193,7 @@ def launch_ipsae_eval_ui() -> None:
 
     zip_upload_panel = make_zip_folder_upload_panel(on_extracted=on_zip_extracted)
 
-    settings_panel = widgets.VBox([widgets.HBox([pae_cutoff, dist_cutoff])])
+    settings_panel = widgets.VBox([wrapping_row([pae_cutoff, dist_cutoff])])
 
     single_panel = widgets.VBox(
         [
@@ -180,7 +202,7 @@ def launch_ipsae_eval_ui() -> None:
                 "Type a server path or upload files below. Pairing is validated for the selected type "
                 "(not inferred from filenames).</span>"
             ),
-            widgets.HBox([model_type, type_hint]),
+            wrapping_row([model_type, type_hint]),
             label,
             structure_path,
             structure_upload,
@@ -235,9 +257,6 @@ def launch_ipsae_eval_ui() -> None:
     tabs = widgets.Tab(children=[single_panel, bulk_panel])
     tabs.set_title(0, "Single Model")
     tabs.set_title(1, "Bulk Evaluation")
-
-    def sync_output_dir_state(_change=None) -> None:
-        output_dir.disabled = not collect_outputs.value
 
     def set_status(message: str, style: str = SOFT) -> None:
         status.value = f'<div style="{style}">{message}</div>'
@@ -343,8 +362,19 @@ def launch_ipsae_eval_ui() -> None:
         return (selected_bulk_folder(), int(bulk_model_index.value))
 
     def sync_single_controls(disabled: bool = False) -> None:
+        mt = current_model_type()
+        locked = single_inputs_locked(model_type=mt, running=disabled)
+        label.disabled = locked
+        structure_path.disabled = locked
+        pae_path.disabled = locked
+        summary_path.disabled = locked
+        set_structure_disabled(locked)
+        set_pae_disabled(locked)
+        set_summary_disabled(locked)
+        collect_outputs.disabled = locked
+        output_dir.disabled = locked or not collect_outputs.value
         ready = single_run_ready(
-            model_type=current_model_type(),
+            model_type=mt,
             structure=structure_path.value,
             pae=pae_path.value,
             running=disabled,
@@ -537,14 +567,13 @@ def launch_ipsae_eval_ui() -> None:
             state["auto_summary"] = None
         sync_single_controls(state["running"])
 
-    collect_outputs.observe(sync_output_dir_state, names="value")
+    collect_outputs.observe(lambda _change: sync_single_controls(state["running"]), names="value")
     model_type.observe(apply_model_type_ui, names="value")
     structure_path.observe(lambda change: sync_single_controls(state["running"]), names="value")
     pae_path.observe(on_pae_path_change, names="value")
     summary_path.observe(on_summary_path_change, names="value")
     bulk_folder_path.observe(on_bulk_input_changed, names="value")
     bulk_model_index.observe(on_bulk_input_changed, names="value")
-    sync_output_dir_state()
     apply_model_type_ui()
     sync_bulk_controls(False)
     run_single.on_click(on_run_single)
@@ -562,7 +591,8 @@ def launch_ipsae_eval_ui() -> None:
                 settings_panel,
                 tabs,
                 status,
-            ]
+            ],
+            layout=scrollable_ui_layout(),
         )
     )
     show_cell_result(

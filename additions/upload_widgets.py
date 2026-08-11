@@ -8,7 +8,7 @@ from typing import Callable
 
 from folder_picker import make_folder_picker, refresh_folder_dropdown
 from paths import UPLOAD_FOLDERS_DIR, rel_repo_path
-from ui_helpers import ERR, INFO, OK, SOFT, warning, widgets
+from ui_helpers import ERR, INFO, OK, SOFT, responsive_layout, warning, widgets, wrapping_row
 from uploads import (
     STRUCTURE_EXTENSIONS,
     MAX_ZIP_BYTES,
@@ -33,11 +33,16 @@ def make_single_file_upload_row(
     description: str,
     allowed_extensions: set[str] | frozenset[str],
     on_saved: Callable[[Path], None],
-) -> tuple["widgets.VBox", Callable[[set[str] | frozenset[str]], None]]:
+    disabled: bool = False,
+) -> tuple[
+    "widgets.VBox",
+    Callable[[set[str] | frozenset[str]], None],
+    Callable[[bool], None],
+]:
     """Build a FileUpload row that saves one file and calls on_saved(path).
 
-    Returns ``(widget, set_allowed_extensions)`` so callers can update accept
-    filters when the selected model type changes.
+    Returns ``(widget, set_allowed_extensions, set_disabled)`` so callers can
+    update accept filters and lock the control when model type is unset.
     """
     if widgets is None:
         raise RuntimeError("ipywidgets is required to create upload widgets.")
@@ -48,6 +53,7 @@ def make_single_file_upload_row(
         accept=_accept_string(state["allowed"]),
         multiple=False,
         description=description,
+        disabled=disabled,
         layout=widgets.Layout(width="320px"),
     )
     status = widgets.HTML(
@@ -61,8 +67,11 @@ def make_single_file_upload_row(
         state["allowed"] = set(extensions)
         uploader.accept = _accept_string(state["allowed"])
 
+    def set_disabled(locked: bool) -> None:
+        uploader.disabled = locked
+
     def on_upload(change=None) -> None:
-        if not uploader.value:
+        if uploader.disabled or not uploader.value:
             return
         set_status("Saving upload...", INFO)
         try:
@@ -76,7 +85,11 @@ def make_single_file_upload_row(
             set_status(f"Upload failed: {exc}", ERR)
 
     uploader.observe(on_upload, names="value")
-    return widgets.VBox([widgets.HBox([uploader]), status]), set_allowed_extensions
+    return (
+        widgets.VBox([widgets.HBox([uploader]), status]),
+        set_allowed_extensions,
+        set_disabled,
+    )
 
 
 def make_zip_folder_upload_panel(
@@ -100,7 +113,7 @@ def make_zip_folder_upload_panel(
         value="",
         description="Zip path",
         placeholder="e.g. model_outputs.zip or upload/files/model_outputs.zip",
-        layout=widgets.Layout(width="760px"),
+        layout=responsive_layout("760px"),
     )
     extract_btn = widgets.Button(
         description="Extract zip",
@@ -175,7 +188,7 @@ def make_zip_folder_upload_panel(
                 f"(archives up to {limit_gb} GB). The widget Upload zip path loads the whole file in the "
                 "browser kernel session and can hang on large transfers — prefer the file browser."
             ),
-            widgets.HBox([zip_path, extract_btn]),
+            wrapping_row([zip_path, extract_btn]),
             widgets.HTML(
                 f'<span style="{SOFT}">Optional: Upload zip widget (same {limit_gb} GB archive cap; '
                 "file browser is more reliable for large exports).</span>"

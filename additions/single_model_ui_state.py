@@ -126,6 +126,15 @@ def maybe_prefill_boltz_summary(pae_path: str, current_summary: str) -> str | No
     return None
 
 
+def single_inputs_locked(
+    *,
+    model_type: ModelType | None,
+    running: bool = False,
+) -> bool:
+    """True when path/upload widgets should be disabled (no type or busy)."""
+    return running or model_type is None
+
+
 def single_run_ready(
     *,
     model_type: ModelType | None,
@@ -133,7 +142,7 @@ def single_run_ready(
     pae: str,
     running: bool = False,
 ) -> bool:
-    if running or model_type is None:
+    if single_inputs_locked(model_type=model_type, running=running):
         return False
     return bool(structure.strip()) and bool(pae.strip())
 
@@ -147,5 +156,6 @@ __all__ = [
     "path_compatible_with_type",
     "clear_incompatible_paths",
     "maybe_prefill_boltz_summary",
+    "single_inputs_locked",
     "single_run_ready",
 ]
