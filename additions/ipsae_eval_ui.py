@@ -38,15 +38,10 @@ from ui_helpers import (
     banner,
     clear_output,
     display,
-    enable_colab_iframe_resize,
-    enable_colab_widget_manager,
     example,
     html,
     publish_cell,
-    responsive_layout,
-    scrollable_ui_layout,
     warning,
-    wrapping_row,
     widgets,
     HTML,
 )
@@ -68,13 +63,8 @@ def launch_ipsae_eval_ui() -> None:
     if widgets is None:
         raise RuntimeError("ipywidgets is required to launch this UI.")
 
-    # Package installation earlier in a Colab session can reset the widget
-    # frontend. Re-enable it immediately before publishing widget views.
-    enable_colab_widget_manager()
-
     # Replace any previously rendered copy of this UI when the notebook cell is rerun.
     clear_output(wait=True)
-    enable_colab_iframe_resize()
     ensure_upload_dirs()
 
     status = widgets.HTML(value=f'<span style="{SOFT}">Ready. Choose single or bulk evaluation, then run ipSAE.</span>')
@@ -98,7 +88,7 @@ def launch_ipsae_eval_ui() -> None:
         value="ipsae_evals",
         description="Output dir",
         disabled=True,
-        layout=responsive_layout("700px"),
+        layout=widgets.Layout(width="700px"),
     )
 
     model_type = widgets.Dropdown(
@@ -109,7 +99,7 @@ def launch_ipsae_eval_ui() -> None:
     )
     type_hint = widgets.HTML(
         value=f'<div style="{SOFT}">{hint_text_for(None)}</div>',
-        layout=responsive_layout("660px"),
+        layout=widgets.Layout(width="660px"),
     )
 
     label = widgets.Text(
@@ -117,28 +107,28 @@ def launch_ipsae_eval_ui() -> None:
         description="Label",
         placeholder="defaults to structure filename",
         disabled=True,
-        layout=responsive_layout("520px"),
+        layout=widgets.Layout(width="520px"),
     )
     structure_path = widgets.Text(
         value="",
         description="Structure",
         placeholder=placeholders_for(None)["structure"],
         disabled=True,
-        layout=responsive_layout(),
+        layout=widgets.Layout(width="940px"),
     )
     pae_path = widgets.Text(
         value="",
         description="PAE",
         placeholder=placeholders_for(None)["pae"],
         disabled=True,
-        layout=responsive_layout(),
+        layout=widgets.Layout(width="940px"),
     )
     summary_path = widgets.Text(
         value="",
         description="Boltz summary",
         placeholder=placeholders_for(None)["summary"],
         disabled=True,
-        layout=responsive_layout(),
+        layout=widgets.Layout(width="940px"),
     )
     run_single = widgets.Button(description="Run ipSAE", button_style="primary", icon="play", disabled=True)
     discover_bulk = widgets.Button(description="Find models", button_style="info", icon="search", disabled=True)
@@ -148,7 +138,7 @@ def launch_ipsae_eval_ui() -> None:
         value="",
         description="Folder",
         placeholder="server path to AF3 Server or Boltz export folder (or extract a zip below first)",
-        layout=responsive_layout(),
+        layout=widgets.Layout(width="940px"),
     )
     bulk_model_index = widgets.BoundedIntText(
         value=0,
@@ -198,7 +188,7 @@ def launch_ipsae_eval_ui() -> None:
 
     zip_upload_panel = make_zip_folder_upload_panel(on_extracted=on_zip_extracted)
 
-    settings_panel = widgets.VBox([wrapping_row([pae_cutoff, dist_cutoff])])
+    settings_panel = widgets.VBox([widgets.HBox([pae_cutoff, dist_cutoff])])
 
     single_panel = widgets.VBox(
         [
@@ -207,7 +197,7 @@ def launch_ipsae_eval_ui() -> None:
                 "Type a server path or upload files below. Pairing is validated for the selected type "
                 "(not inferred from filenames).</span>"
             ),
-            wrapping_row([model_type, type_hint]),
+            widgets.HBox([model_type, type_hint]),
             label,
             structure_path,
             structure_upload,
@@ -597,7 +587,6 @@ def launch_ipsae_eval_ui() -> None:
                 tabs,
                 status,
             ],
-            layout=scrollable_ui_layout(),
         )
     )
     show_cell_result(

@@ -19,13 +19,9 @@ from ui_helpers import (
     banner,
     clear_output,
     display,
-    enable_colab_iframe_resize,
-    enable_colab_widget_manager,
     html,
     panel,
     publish_cell,
-    responsive_layout,
-    scrollable_ui_layout,
     widgets,
     HTML,
 )
@@ -38,9 +34,7 @@ def launch_ipsae_comparison_ui() -> None:
     if widgets is None:
         raise RuntimeError("ipywidgets is required to launch this UI.")
 
-    enable_colab_widget_manager()
     clear_output(wait=True)
-    enable_colab_iframe_resize()
 
     state = {"running": False}
     cell_initialized: set[str] = set()
@@ -49,12 +43,12 @@ def launch_ipsae_comparison_ui() -> None:
         value="ipsae_evals",
         description="Metrics folder",
         placeholder="server path to an ipSAE output folder (e.g. ipsae_evals or bulk_ipsae_evals_...)",
-        layout=responsive_layout(),
+        layout=widgets.Layout(width="940px"),
     )
     summary_csv = widgets.Text(
         value="ipsae_evals_summary.csv",
         description="Summary CSV",
-        layout=responsive_layout(),
+        layout=widgets.Layout(width="940px"),
     )
     run_summary = widgets.Button(description="Summarize metrics", button_style="success", icon="bar-chart")
     summary_status = widgets.HTML(value=f'<span style="{SOFT}">Ready. Enter a metrics folder path, then summarize.</span>')
@@ -122,7 +116,6 @@ def launch_ipsae_comparison_ui() -> None:
                 comparison_panel,
                 summary_status,
             ],
-            layout=scrollable_ui_layout(),
         )
     )
     show_summary_result(

@@ -8,7 +8,7 @@ from typing import Callable
 
 from folder_picker import make_folder_picker, refresh_folder_dropdown
 from paths import UPLOAD_FOLDERS_DIR, rel_repo_path
-from ui_helpers import ERR, INFO, OK, SOFT, responsive_layout, warning, widgets, wrapping_row
+from ui_helpers import ERR, INFO, OK, SOFT, warning, widgets
 from uploads import (
     STRUCTURE_EXTENSIONS,
     MAX_ZIP_BYTES,
@@ -113,7 +113,7 @@ def make_zip_folder_upload_panel(
         value="",
         description="Zip path",
         placeholder="e.g. model_outputs.zip or upload/files/model_outputs.zip",
-        layout=responsive_layout("760px"),
+        layout=widgets.Layout(width="760px"),
     )
     extract_btn = widgets.Button(
         description="Extract zip",
@@ -188,7 +188,7 @@ def make_zip_folder_upload_panel(
                 f"(archives up to {limit_gb} GB). The widget Upload zip path loads the whole file in the "
                 "browser kernel session and can hang on large transfers — prefer the file browser."
             ),
-            wrapping_row([zip_path, extract_btn]),
+            widgets.HBox([zip_path, extract_btn]),
             widgets.HTML(
                 f'<span style="{SOFT}">Optional: Upload zip widget (same {limit_gb} GB archive cap; '
                 "file browser is more reliable for large exports).</span>"
