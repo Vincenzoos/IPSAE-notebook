@@ -39,6 +39,7 @@ from ui_helpers import (
     clear_output,
     display,
     enable_colab_iframe_resize,
+    enable_colab_widget_manager,
     example,
     html,
     publish_cell,
@@ -66,6 +67,10 @@ RESULT_EXTRA_ID = "ipsae-eval-result-extra"
 def launch_ipsae_eval_ui() -> None:
     if widgets is None:
         raise RuntimeError("ipywidgets is required to launch this UI.")
+
+    # Package installation earlier in a Colab session can reset the widget
+    # frontend. Re-enable it immediately before publishing widget views.
+    enable_colab_widget_manager()
 
     # Replace any previously rendered copy of this UI when the notebook cell is rerun.
     clear_output(wait=True)

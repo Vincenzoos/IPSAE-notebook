@@ -45,6 +45,16 @@ def enable_colab_iframe_resize(max_height: int = 10_000) -> None:
     )
 
 
+def enable_colab_widget_manager() -> None:
+    """Enable third-party ipywidgets in the current Colab runtime."""
+    if "google.colab" not in sys.modules:
+        return
+
+    from google.colab import output as colab_output
+
+    colab_output.enable_custom_widget_manager()
+
+
 def responsive_layout(max_width: str = "940px", **kwargs) -> "widgets.Layout":
     """Return a full-width layout capped at a comfortable desktop width."""
     return widgets.Layout(width="100%", max_width=max_width, **kwargs)

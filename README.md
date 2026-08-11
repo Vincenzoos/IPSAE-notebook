@@ -31,13 +31,18 @@ https://mybinder.org/v2/gh/Vincenzoos/IPSAE-notebook/main?urlpath=lab/tree/ipsae
 
 On Binder, open `ipsae_eval.ipynb`, run **Package Installation**, then the evaluation cells. Upload structure/PAE files in the UI; for bulk AF3 Server or Boltz folders, upload the zip via the JupyterLab file browser then Extract zip (up to 2 GB). Use the zip helper cell to package outputs for download. The first Binder launch builds the environment and can take several minutes.
 
-**Also available (quick try; tall widget UI may clip):**
+**Google Colab (full scrollable widget UI):**
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb)
 
 ```text
 https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb
 ```
+
+On Colab, run **Package Installation** before launching either UI. If a UI cell
+prints its ready message but the widgets are blank, use **Runtime → Disconnect
+and delete runtime**, reconnect, and rerun the cells from the top so Colab loads
+the widget manager after package installation.
 
 # Installation
 Simply download the Python script ipsae.py. It may be necessary to install the Python numpy package with:

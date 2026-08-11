@@ -20,6 +20,7 @@ from ui_helpers import (
     clear_output,
     display,
     enable_colab_iframe_resize,
+    enable_colab_widget_manager,
     html,
     panel,
     publish_cell,
@@ -37,6 +38,7 @@ def launch_ipsae_comparison_ui() -> None:
     if widgets is None:
         raise RuntimeError("ipywidgets is required to launch this UI.")
 
+    enable_colab_widget_manager()
     clear_output(wait=True)
     enable_colab_iframe_resize()
 
