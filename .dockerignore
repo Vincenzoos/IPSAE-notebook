@@ -1,0 +1,12 @@
+.git
+**/.git
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ipynb_checkpoints
+upload/
+bulk_evals/
+ipsae_evals/
+single_evals/
+dev plan/
+*.zip
