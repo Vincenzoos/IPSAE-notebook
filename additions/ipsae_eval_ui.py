@@ -189,8 +189,7 @@ def launch_ipsae_eval_ui() -> None:
 
     zip_upload_panel = make_zip_folder_upload_panel(on_extracted=on_zip_extracted)
 
-    # flex="0 0 auto" keeps cutoffs visible when a parent sets a fixed height/overflow
-    # (e.g. Colab scroll wrapper); otherwise the Tab below can crush this row.
+    # Keep cutoffs visible when a parent sets a fixed height/overflow.
     settings_panel = widgets.VBox(
         [
             widgets.HBox(

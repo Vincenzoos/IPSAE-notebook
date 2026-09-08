@@ -4,7 +4,7 @@ Scoring function for interprotein interactions in AlphaFold2 and AlphaFold3
 
 Original upstream: [https://github.com/DunbrackLab/IPSAE](https://github.com/DunbrackLab/IPSAE)
 
-# Notebook (Binder / Codespaces / Colab)
+# Notebook (Binder / Codespaces)
 
 Interactive evaluation UI (`ipsae_eval.ipynb`) for single-model and bulk scoring of
 AlphaFold2, AlphaFold Server (AF3), and Boltz outputs.
@@ -52,19 +52,6 @@ jupyter lab ipsae_eval.ipynb
 ```
 
 Creates conda env `ipsae-notebook`, installs notebook deps, registers a Jupyter kernel, and installs recommended Cursor/VS Code extensions when the `cursor` or `code` CLI is available.
-
-**Google Colab:**
-
-[Open In Colab](https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb)
-
-```text
-https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb
-```
-
-On Colab, run **Package Installation** before launching either UI. If a UI cell
-prints its ready message but the widgets are blank, use **Runtime → Disconnect
-and delete runtime**, reconnect, and rerun the cells from the top so Colab loads
-the widget manager after package installation.
 
 # Installation
 
