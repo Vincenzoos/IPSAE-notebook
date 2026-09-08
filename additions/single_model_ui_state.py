@@ -7,14 +7,14 @@ from pathlib import Path
 from model_pairing import (
     MODEL_TYPE_CHOICES,
     ModelType,
-    expected_boltz_summary_path,
+    expected_boltz_confidence_path,
     parse_af2_pae_pairing,
     parse_af2_structure_pairing,
     parse_af3_pae_pairing,
     parse_af3_structure_pairing,
     parse_boltz_pae_pairing,
     parse_boltz_structure_pairing,
-    parse_boltz_summary_pairing,
+    parse_boltz_confidence_pairing,
     parse_model_type,
     type_hints_for,
 )
@@ -32,13 +32,13 @@ def placeholders_for(model_type: ModelType | None) -> dict[str, str]:
         return {
             "structure": "Select a model type first",
             "pae": "Select a model type first",
-            "summary": "confidence_<complex>_model_0.json",
+            "confidence": "confidence_<complex>_model_0.json",
         }
     hints = type_hints_for(model_type)
     return {
         "structure": hints.structure_placeholder,
         "pae": hints.pae_placeholder,
-        "summary": hints.summary_placeholder or "confidence_<complex>_model_0.json",
+        "confidence": hints.confidence_placeholder or "confidence_<complex>_model_0.json",
     }
 
 
@@ -47,13 +47,13 @@ def upload_extensions_for(model_type: ModelType | None) -> dict[str, frozenset[s
         return {
             "structure": frozenset({".pdb", ".cif"}),
             "pae": frozenset({".json", ".npz"}),
-            "summary": frozenset({".json"}),
+            "confidence": frozenset({".json"}),
         }
     hints = type_hints_for(model_type)
     return {
         "structure": hints.structure_extensions,
         "pae": hints.pae_extensions,
-        "summary": frozenset({".json"}),
+        "confidence": frozenset({".json"}),
     }
 
 
@@ -79,7 +79,7 @@ def path_compatible_with_type(path: str, model_type: ModelType, kind: str) -> bo
         (ModelType.AF3, "pae"): parse_af3_pae_pairing,
         (ModelType.BOLTZ, "structure"): parse_boltz_structure_pairing,
         (ModelType.BOLTZ, "pae"): parse_boltz_pae_pairing,
-        (ModelType.BOLTZ, "summary"): parse_boltz_summary_pairing,
+        (ModelType.BOLTZ, "confidence"): parse_boltz_confidence_pairing,
     }
     parser = parsers.get((model_type, kind))
     return parser(candidate) is not None if parser else True
@@ -90,27 +90,29 @@ def clear_incompatible_paths(
     model_type: ModelType | None,
     structure: str,
     pae: str,
-    summary: str,
+    confidence: str,
 ) -> dict[str, str]:
     """Clear path values that are incompatible with the newly selected type."""
     if model_type is None:
-        return {"structure": "", "pae": "", "summary": ""}
+        return {"structure": "", "pae": "", "confidence": ""}
     out = {
         "structure": structure if path_compatible_with_type(structure, model_type, "structure") else "",
         "pae": pae if path_compatible_with_type(pae, model_type, "pae") else "",
-        "summary": "",
+        "confidence": "",
     }
     if model_type is ModelType.BOLTZ:
-        out["summary"] = summary if path_compatible_with_type(summary, model_type, "summary") else ""
+        out["confidence"] = (
+            confidence if path_compatible_with_type(confidence, model_type, "confidence") else ""
+        )
     return out
 
 
-def maybe_prefill_boltz_summary(pae_path: str, current_summary: str) -> str | None:
-    """Return an existing sibling summary path to prefill, or None.
+def maybe_prefill_boltz_confidence(pae_path: str, current_confidence: str) -> str | None:
+    """Return an existing sibling confidence path to prefill, or None.
 
-    Does not overwrite a non-empty user-entered summary value.
+    Does not overwrite a non-empty user-entered confidence value.
     """
-    if (current_summary or "").strip():
+    if (current_confidence or "").strip():
         return None
     text = (pae_path or "").strip()
     if not text:
@@ -118,7 +120,7 @@ def maybe_prefill_boltz_summary(pae_path: str, current_summary: str) -> str | No
     try:
         from paths import resolve_repo_path
 
-        expected = expected_boltz_summary_path(resolve_repo_path(text))
+        expected = expected_boltz_confidence_path(resolve_repo_path(text))
     except ValueError:
         return None
     if expected.is_file():
@@ -155,7 +157,7 @@ __all__ = [
     "hint_text_for",
     "path_compatible_with_type",
     "clear_incompatible_paths",
-    "maybe_prefill_boltz_summary",
+    "maybe_prefill_boltz_confidence",
     "single_inputs_locked",
     "single_run_ready",
 ]

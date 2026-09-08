@@ -9,11 +9,11 @@ from pathlib import Path
 import pandas as pd
 
 from model_pairing import (
-    BOLTZ_MISSING_SUMMARY_WARNING,
+    BOLTZ_MISSING_CONFIDENCE_WARNING,
     ModelType,
     af3_summary_path_for,
     detect_bulk_model_type,
-    expected_boltz_summary_path,
+    expected_boltz_confidence_path,
     parse_af3_pae_pairing,
     parse_af3_structure_pairing,
     parse_boltz_pae_pairing,
@@ -215,7 +215,7 @@ def discover_boltz_models(
     pae_cutoff: float = 10.0,
     dist_cutoff: float = 10.0,
 ) -> tuple[list[IpsaeJob], pd.DataFrame]:
-    """Find Boltz 1 / Boltz 2 pae_*_model_N.npz files and matching structure/summary siblings."""
+    """Find Boltz 1 / Boltz 2 pae_*_model_N.npz files and matching structure/confidence siblings."""
     root = resolve_repo_path(folder)
     if not root.exists():
         raise FileNotFoundError(f"Folder not found: {root}")
@@ -247,9 +247,10 @@ def discover_boltz_models(
         structures = sorted(structures_by_key.get(key, []))
         folder_path = (pae or structures[0]).parent
         expected_pae_name = f"pae_{complex_id}_model_{model_index}.npz"
-        summary = expected_boltz_summary_path(folder_path / expected_pae_name)
-        summary_ok = summary.is_file()
-        summary_status = "present" if summary_ok else "missing (warning)"
+        confidence = expected_boltz_confidence_path(folder_path / expected_pae_name)
+        confidence_ok = confidence.is_file()
+        # Preview reuses the shared Summary column for AF3 summary / Boltz confidence.
+        summary_status = "present" if confidence_ok else "missing (warning)"
 
         error = ""
         if len(structures) > 1:
@@ -266,7 +267,7 @@ def discover_boltz_models(
 
         structure = structures[0] if len(structures) == 1 else None
         model_name = model_name_from_structure(structure) if structure else complex_id
-        warning = "" if summary_ok else BOLTZ_MISSING_SUMMARY_WARNING
+        warning = "" if confidence_ok else BOLTZ_MISSING_CONFIDENCE_WARNING
         rows.append(
             _preview_row(
                 model_type=ModelType.BOLTZ,
@@ -280,7 +281,7 @@ def discover_boltz_models(
                     or f"{complex_id}_model_{model_index}.cif|.pdb"
                 ),
                 pae_name=pae.name if pae else expected_pae_name,
-                summary_name=summary.name if summary_ok else "",
+                summary_name=confidence.name if confidence_ok else "",
                 summary_status=summary_status,
                 ready=not error,
                 error=error or warning,
@@ -296,7 +297,7 @@ def discover_boltz_models(
                 model_type=ModelType.BOLTZ,
                 pae_cutoff=float(pae_cutoff),
                 dist_cutoff=float(dist_cutoff),
-                summary_file=summary if summary_ok else None,
+                summary_file=confidence if confidence_ok else None,
             )
         )
 

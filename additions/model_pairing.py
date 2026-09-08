@@ -33,8 +33,8 @@ MODEL_TYPE_CHOICES: tuple[tuple[str, str], ...] = (
     ("Boltz 1 / Boltz 2", ModelType.BOLTZ.value),
 )
 
-BOLTZ_MISSING_SUMMARY_WARNING = (
-    "Boltz 1 / Boltz 2 summary file not found. ipSAE will still run, but Boltz 1 / Boltz 2 "
+BOLTZ_MISSING_CONFIDENCE_WARNING = (
+    "Boltz 1 / Boltz 2 confidence file not found. ipSAE will still run, but Boltz 1 / Boltz 2 "
     "ipTM values may be unavailable or zero."
 )
 
@@ -49,7 +49,7 @@ AF3_PAE_RE = re.compile(r"^(?P<complex>.+)_full_data_(?P<index>\d+)$")
 AF3_SUMMARY_RE = re.compile(r"^(?P<complex>.+)_summary_confidences_(?P<index>\d+)$")
 BOLTZ_STRUCTURE_RE = re.compile(r"^(?P<complex>.+)_model_(?P<index>\d+)$")
 BOLTZ_PAE_RE = re.compile(r"^pae_(?P<complex>.+)_model_(?P<index>\d+)$")
-BOLTZ_SUMMARY_RE = re.compile(r"^confidence_(?P<complex>.+)_model_(?P<index>\d+)$")
+BOLTZ_CONFIDENCE_RE = re.compile(r"^confidence_(?P<complex>.+)_model_(?P<index>\d+)$")
 
 # Signatures used for bulk type detection (any model index).
 AF3_PAE_ANY_RE = re.compile(r"^.+_full_data_\d+\.json$")
@@ -74,7 +74,7 @@ class TypeHints:
     structure_extensions: frozenset[str]
     pae_extensions: frozenset[str]
     hint_html: str
-    summary_placeholder: str | None = None
+    confidence_placeholder: str | None = None
 
 
 TYPE_HINTS: dict[ModelType, TypeHints] = {
@@ -84,13 +84,12 @@ TYPE_HINTS: dict[ModelType, TypeHints] = {
         structure_extensions=frozenset({".pdb"}),
         pae_extensions=frozenset({".json"}),
         hint_html=(
-            'AlphaFold2 / ColabFold default naming: structure '
+            '<a href="https://github.com/google-deepmind/alphafold/blob/main/README.md#alphafold-output" '
+            'target="_blank">AlphaFold2 files</a>: structure '
             '<code>*_unrelaxed_rank_&lt;rank&gt;_&lt;details&gt;.pdb</code> '
             'with matching PAE <code>*_scores_rank_&lt;rank&gt;_&lt;details&gt;.json</code>. '
             'Example: <code>RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb</code> '
             '+ <code>RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json</code>. '
-            '<a href="https://github.com/google-deepmind/alphafold/blob/main/README.md#alphafold-output" '
-            'target="_blank">[AlphaFold2 details]</a>'
         ),
     ),
     ModelType.AF3: TypeHints(
@@ -99,13 +98,12 @@ TYPE_HINTS: dict[ModelType, TypeHints] = {
         structure_extensions=frozenset({".cif"}),
         pae_extensions=frozenset({".json"}),
         hint_html=(
-            'AlphaFold Server naming: structure <code>*_model_N.cif</code> with matching '
+            '<a href="https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/'
+            'alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/" '
+            'target="_blank">AlphaFold Server files</a>: structure <code>*_model_N.cif</code> with matching '
             'PAE <code>*_full_data_N.json</code> (same complex and N). '
             'Example: <code>fold_aurka_tpx2_model_0.cif</code> + '
             '<code>fold_aurka_tpx2_full_data_0.json</code>. '
-            '<a href="https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/'
-            'alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/" '
-            'target="_blank">[AlphaFold Server output reference]</a>'
         ),
     ),
     ModelType.BOLTZ: TypeHints(
@@ -113,15 +111,14 @@ TYPE_HINTS: dict[ModelType, TypeHints] = {
         pae_placeholder="pae_<complex>_model_0.npz",
         structure_extensions=frozenset({".pdb", ".cif"}),
         pae_extensions=frozenset({".npz"}),
-        summary_placeholder="confidence_<complex>_model_0.json",
+        confidence_placeholder="confidence_<complex>_model_0.json",
         hint_html=(
-            'Boltz 1 / Boltz 2 naming: structure <code>&lt;complex&gt;_model_N.pdb</code> or '
+            '<a href="https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output" '
+            'target="_blank">Boltz 1 / Boltz 2 files</a>: structure <code>&lt;complex&gt;_model_N.pdb</code> or '
             '<code>.cif</code> with PAE <code>pae_&lt;complex&gt;_model_N.npz</code>. '
-            'Optional summary <code>confidence_&lt;complex&gt;_model_N.json</code>. '
+            'Optional confidence <code>confidence_&lt;complex&gt;_model_N.json</code>. '
             'Example: <code>AURKA_TPX2_model_0.cif</code> + '
             '<code>pae_AURKA_TPX2_model_0.npz</code>. '
-            '<a href="https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output" '
-            'target="_blank">[Boltz 1 / Boltz 2 output docs]</a>'
         ),
     ),
 }
@@ -189,7 +186,7 @@ def boltz_companion_paths(pae_file: str | Path) -> tuple[Path, Path]:
     return confidence, plddt
 
 
-def expected_boltz_summary_path(pae_file: str | Path) -> Path:
+def expected_boltz_confidence_path(pae_file: str | Path) -> Path:
     confidence, _plddt = boltz_companion_paths(pae_file)
     return confidence
 
@@ -287,11 +284,11 @@ def parse_boltz_pae_pairing(pae_file: str | Path) -> PairInfo | None:
     )
 
 
-def parse_boltz_summary_pairing(summary_file: str | Path) -> PairInfo | None:
-    path = Path(summary_file)
+def parse_boltz_confidence_pairing(confidence_file: str | Path) -> PairInfo | None:
+    path = Path(confidence_file)
     if path.suffix != ".json":
         return None
-    match = BOLTZ_SUMMARY_RE.match(path.stem)
+    match = BOLTZ_CONFIDENCE_RE.match(path.stem)
     if not match:
         return None
     return PairInfo(
@@ -416,35 +413,35 @@ def _validate_af3_summary(
         )
 
 
-def _validate_boltz_summary(
-    summary_path: Path,
+def _validate_boltz_confidence(
+    confidence_path: Path,
     structure: PairInfo,
     pae_path: Path,
 ) -> None:
-    if summary_path.suffix != ".json":
+    if confidence_path.suffix != ".json":
         raise ValueError(
-            "Boltz 1 / Boltz 2 summary file must be a .json file matching "
+            "Boltz 1 / Boltz 2 confidence file must be a .json file matching "
             "'confidence_<complex>_model_N.json'. "
-            f"Got '{summary_path.name}'."
+            f"Got '{confidence_path.name}'."
         )
-    summary = parse_boltz_summary_pairing(summary_path)
-    expected = expected_boltz_summary_path(pae_path)
-    if not summary:
+    confidence = parse_boltz_confidence_pairing(confidence_path)
+    expected = expected_boltz_confidence_path(pae_path)
+    if not confidence:
         raise ValueError(
-            "Boltz 1 / Boltz 2 summary filename mismatch: expected "
-            f"'{expected.name}'. Got '{summary_path.name}'."
+            "Boltz 1 / Boltz 2 confidence filename mismatch: expected "
+            f"'{expected.name}'. Got '{confidence_path.name}'."
         )
-    if summary.complex_id != structure.complex_id or summary.model_index != structure.model_index:
+    if confidence.complex_id != structure.complex_id or confidence.model_index != structure.model_index:
         raise ValueError(
-            "Boltz 1 / Boltz 2 summary mismatch: summary must match the structure/PAE "
+            "Boltz 1 / Boltz 2 confidence mismatch: confidence must match the structure/PAE "
             "complex and model index. "
-            f"Got '{summary_path.name}' for structure complex '{structure.complex_id}' "
+            f"Got '{confidence_path.name}' for structure complex '{structure.complex_id}' "
             f"model {structure.model_index}."
         )
-    if summary_path.name != expected.name:
+    if confidence_path.name != expected.name:
         raise ValueError(
-            "Boltz 1 / Boltz 2 summary filename mismatch: expected sibling "
-            f"'{expected.name}' for PAE '{pae_path.name}'. Got '{summary_path.name}'."
+            "Boltz 1 / Boltz 2 confidence filename mismatch: expected sibling "
+            f"'{expected.name}' for PAE '{pae_path.name}'. Got '{confidence_path.name}'."
         )
 
 
@@ -478,24 +475,25 @@ def _validate_boltz(
             f"Got '{structure_path.name}' and '{pae_path.name}'."
         )
 
-    summary_path: Path | None = None
+    # summary_file is the shared IpsaeJob field; for Boltz it holds the confidence JSON.
+    confidence_path: Path | None = None
     warning: str | None = None
     if summary_file is not None and str(summary_file).strip():
-        summary_path = Path(summary_file)
-        _require_regular_file(summary_path, "Boltz 1 / Boltz 2 summary file")
-        _validate_boltz_summary(summary_path, structure, pae_path)
+        confidence_path = Path(summary_file)
+        _require_regular_file(confidence_path, "Boltz 1 / Boltz 2 confidence file")
+        _validate_boltz_confidence(confidence_path, structure, pae_path)
         _require_same_folder(
-            [structure_path, pae_path, summary_path],
-            ["structure", "PAE", "summary"],
+            [structure_path, pae_path, confidence_path],
+            ["structure", "PAE", "confidence"],
         )
     else:
         _require_same_folder([structure_path, pae_path], ["structure", "PAE"])
-        expected = expected_boltz_summary_path(pae_path)
+        expected = expected_boltz_confidence_path(pae_path)
         if expected.is_file():
-            summary_path = expected
+            confidence_path = expected
         else:
-            warning = BOLTZ_MISSING_SUMMARY_WARNING
-    return structure, summary_path, warning
+            warning = BOLTZ_MISSING_CONFIDENCE_WARNING
+    return structure, confidence_path, warning
 
 
 def validate_structure_pae_pairing(
@@ -508,7 +506,7 @@ def validate_structure_pae_pairing(
 ) -> dict:
     """Validate structure/PAE pairing for an explicit model type.
 
-    Returns a dict with pair info and optional Boltz 1 / Boltz 2 summary path/warning.
+    Returns a dict with pair info and optional AF3 summary / Boltz confidence path/warning.
     """
     model = parse_model_type(model_type)
     structure_path = Path(structure_file)
@@ -522,7 +520,9 @@ def validate_structure_pae_pairing(
     summary_path: Path | None = None
     if model is ModelType.AF2:
         if summary_file is not None and str(summary_file).strip():
-            raise ValueError("Summary file is only used for Boltz 1 / Boltz 2 jobs.")
+            raise ValueError(
+                "AlphaFold2 jobs do not use a summary or confidence file."
+            )
         info = _validate_af2(structure_path, pae_path)
     elif model is ModelType.AF3:
         info = _validate_af3(structure_path, pae_path)

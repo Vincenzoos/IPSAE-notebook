@@ -514,7 +514,7 @@ if boltz:
                         if chain1 == chain2: continue
                         iptm_boltz[chain1][chain2]=boltz_chain_pair_iptm_data[str(nchain1)][str(nchain2)]
     else:
-        print("Boltz summary file does not exist: ", summary_file_path)
+        print("Boltz confidence file does not exist: ", summary_file_path)
 
 if af3:
     # Example Alphafold3 server filenames

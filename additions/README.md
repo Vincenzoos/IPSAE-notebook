@@ -71,19 +71,19 @@ case-sensitive.
 
 - Structure: `<complex>_model_<N>.pdb` or `.cif`
 - PAE: `pae_<complex>_model_<N>.npz`
-- Optional summary: `confidence_<complex>_model_<N>.json`
+- Optional confidence: `confidence_<complex>_model_<N>.json`
 - Example:
   - `AURKA_TPX2_model_0.cif`
   - `pae_AURKA_TPX2_model_0.npz`
   - `confidence_AURKA_TPX2_model_0.json`
-- A missing Boltz summary does not block the run; the UI shows a soft warning because Boltz ipTM values may be unavailable/zero.
+- A missing Boltz confidence file does not block the run; the UI shows a soft warning because Boltz ipTM values may be unavailable/zero.
 
 ## Single-model validation
 
 `single_model_eval.py` validates using the selected model type before calling
 `ipsae.py`. Extensions, same-folder placement, and name pairing are checked.
 Changing the model type updates upload filters, placeholders, and clears
-incompatible paths. Boltz shows an optional summary upload row.
+incompatible paths. Boltz shows an optional confidence upload row.
 
 ## File and folder uploads
 
@@ -95,7 +95,7 @@ Uploads are stored under the project root:
 ```
 
 Single Model upload extensions depend on the selected type (AF2 `.pdb`+`.json`;
-AF3 `.cif`+`.json`; Boltz `.pdb`/`.cif`+`.npz`, optional `.json` summary).
+AF3 `.cif`+`.json`; Boltz `.pdb`/`.cif`+`.npz`, optional `.json` confidence).
 
 Bulk Evaluation: upload a zip via the JupyterLab file browser, paste the path into
 **Zip path**, and click **Extract zip** (up to 2 GB). Extracted zips land in

@@ -110,17 +110,17 @@ def save_uploaded_file(
 
 
 def save_single_upload(upload_widget, kind: str) -> Path:
-    """Save exactly one structure, PAE, or summary file to upload/files."""
+    """Save exactly one structure, PAE, or confidence/summary file to upload/files."""
     kind_key = str(kind).strip().lower()
     if kind_key == "structure":
         allowed = STRUCTURE_EXTENSIONS
     elif kind_key == "pae":
         allowed = PAE_EXTENSIONS
-    elif kind_key in {"summary", "boltz_summary"}:
+    elif kind_key in {"confidence", "boltz_confidence", "summary", "boltz_summary"}:
         allowed = SUMMARY_EXTENSIONS
     else:
         raise UploadError(
-            f"Unknown upload kind: {kind!r}. Use 'structure', 'pae', or 'summary'."
+            f"Unknown upload kind: {kind!r}. Use 'structure', 'pae', or 'confidence'."
         )
 
     paths = save_uploaded_file(upload_widget, UPLOAD_FILES_DIR, allowed)

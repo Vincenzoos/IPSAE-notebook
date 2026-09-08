@@ -94,7 +94,7 @@ class BulkDiscoveryTests(unittest.TestCase):
             )
             self.assertEqual(validation["summary_file"].name, "fold_a_summary_confidences_0.json")
 
-    def test_discovers_ready_boltz_job_without_optional_summary(self) -> None:
+    def test_discovers_ready_boltz_job_without_optional_confidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             folder = root / "AURKA_TPX2"

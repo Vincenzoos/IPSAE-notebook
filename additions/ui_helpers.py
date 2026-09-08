@@ -29,6 +29,21 @@ EXAMPLE_CARD = (
     "padding:12px 16px;border-radius:6px;margin:8px 0;font-family:monospace;"
 )
 
+AF2_OUTPUT_URL = (
+    "https://github.com/google-deepmind/alphafold/blob/main/README.md#alphafold-output"
+)
+AF3_SERVER_OUTPUT_URL = (
+    "https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/"
+    "alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/"
+)
+BOLTZ_OUTPUT_URL = (
+    "https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output"
+)
+
+
+def doc_link(url: str, label: str) -> str:
+    return f'<a href="{url}" target="_blank">{label}</a>'
+
 
 def banner(text: str) -> "widgets.HTML":
     return widgets.HTML(f'<div style="{BANNER}"><b>{text}</b></div>')

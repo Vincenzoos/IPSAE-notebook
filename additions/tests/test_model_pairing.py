@@ -10,7 +10,7 @@ from model_pairing import (
     ModelType,
     af3_summary_path_for,
     boltz_companion_paths,
-    expected_boltz_summary_path,
+    expected_boltz_confidence_path,
     parse_af2_pae_pairing,
     parse_af2_structure_pairing,
     parse_af3_pae_pairing,
@@ -18,7 +18,7 @@ from model_pairing import (
     parse_af3_summary_pairing,
     parse_boltz_pae_pairing,
     parse_boltz_structure_pairing,
-    parse_boltz_summary_pairing,
+    parse_boltz_confidence_pairing,
     parse_model_type,
 )
 
@@ -58,14 +58,14 @@ class ParseHelpersTests(unittest.TestCase):
         af3_summary = parse_af3_summary_pairing("c_summary_confidences_12.json")
         boltz_structure = parse_boltz_structure_pairing("c_model_12.pdb")
         boltz_pae = parse_boltz_pae_pairing("pae_c_model_12.npz")
-        boltz_summary = parse_boltz_summary_pairing("confidence_c_model_12.json")
+        boltz_confidence = parse_boltz_confidence_pairing("confidence_c_model_12.json")
 
         self.assertEqual((af2_structure.complex_id, af2_structure.rank, af2_structure.details), ("c", "001", "d"))
         self.assertEqual(af2_structure, af2_pae)
         self.assertEqual(af3_structure, af3_pae)
         self.assertEqual(af3_structure, af3_summary)
         self.assertEqual(boltz_structure, boltz_pae)
-        self.assertEqual(boltz_structure, boltz_summary)
+        self.assertEqual(boltz_structure, boltz_confidence)
 
     def test_parsers_reject_wrong_extensions_or_malformed_names(self) -> None:
         cases = [
@@ -77,7 +77,7 @@ class ParseHelpersTests(unittest.TestCase):
             (parse_af3_summary_pairing, "c_summary_confidence_0.json"),
             (parse_boltz_structure_pairing, "c_model_0.xyz"),
             (parse_boltz_pae_pairing, "c_model_0.npz"),
-            (parse_boltz_summary_pairing, "confidence_c_model_x.json"),
+            (parse_boltz_confidence_pairing, "confidence_c_model_x.json"),
         ]
         for parser, filename in cases:
             with self.subTest(parser=parser.__name__, filename=filename):
@@ -90,7 +90,7 @@ class CompanionPathTests(unittest.TestCase):
         confidence, plddt = boltz_companion_paths(pae)
         self.assertEqual(confidence, Path("/data/pae_runs/job1/confidence_AURKA_TPX2_model_0.json"))
         self.assertEqual(plddt, Path("/data/pae_runs/job1/plddt_AURKA_TPX2_model_0.npz"))
-        self.assertEqual(expected_boltz_summary_path(pae), confidence)
+        self.assertEqual(expected_boltz_confidence_path(pae), confidence)
 
     def test_invalid_boltz_pae_cannot_produce_companions(self) -> None:
         for filename in ("X_model_0.npz", "pae_X_model_0.json", "pae_.npz"):

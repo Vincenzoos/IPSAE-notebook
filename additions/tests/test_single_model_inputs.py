@@ -6,10 +6,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from model_pairing import BOLTZ_MISSING_SUMMARY_WARNING, ModelType, validate_structure_pae_pairing
+from model_pairing import BOLTZ_MISSING_CONFIDENCE_WARNING, ModelType, validate_structure_pae_pairing
 from single_model_ui_state import (
     clear_incompatible_paths,
-    maybe_prefill_boltz_summary,
+    maybe_prefill_boltz_confidence,
     path_compatible_with_type,
     selected_model_type,
     single_inputs_locked,
@@ -190,7 +190,7 @@ class SingleModelSummaryTests(unittest.TestCase):
                 )
                 self.assertEqual(result["summary_file"], summary)
 
-    def test_boltz_explicit_and_automatic_summary_discovery(self) -> None:
+    def test_boltz_explicit_and_automatic_confidence_discovery(self) -> None:
         for explicit in (False, True):
             with self.subTest(explicit=explicit), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
@@ -206,7 +206,7 @@ class SingleModelSummaryTests(unittest.TestCase):
                 self.assertEqual(result["summary_file"], summary)
                 self.assertIsNone(result["warning"])
 
-    def test_missing_boltz_summary_returns_warning(self) -> None:
+    def test_missing_boltz_confidence_returns_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             result = validate_structure_pae_pairing(
@@ -215,12 +215,12 @@ class SingleModelSummaryTests(unittest.TestCase):
                 ModelType.BOLTZ,
             )
             self.assertIsNone(result["summary_file"])
-            self.assertEqual(result["warning"], BOLTZ_MISSING_SUMMARY_WARNING)
+            self.assertEqual(result["warning"], BOLTZ_MISSING_CONFIDENCE_WARNING)
 
     def test_mismatched_or_misplaced_summaries_are_rejected(self) -> None:
         cases = [
             (ModelType.AF3, AF3_STRUCTURE, AF3_PAE, "other_summary_confidences_0.json", "summary filename mismatch"),
-            (ModelType.BOLTZ, BOLTZ_STRUCTURE_CIF, BOLTZ_PAE, "confidence_X_model_1.json", "summary mismatch"),
+            (ModelType.BOLTZ, BOLTZ_STRUCTURE_CIF, BOLTZ_PAE, "confidence_X_model_1.json", "confidence mismatch"),
         ]
         for model_type, structure_name, pae_name, summary_name, message in cases:
             with self.subTest(model_type=model_type), tempfile.TemporaryDirectory() as tmp:
@@ -244,7 +244,7 @@ class SingleModelSummaryTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "same parent folder"):
                     validate_structure_pae_pairing(structure, pae, model_type, summary_file=summary)
 
-    def test_summary_extension_and_missing_summary_file_are_rejected(self) -> None:
+    def test_confidence_extension_and_missing_confidence_file_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             structure = _touch(root / BOLTZ_STRUCTURE_CIF)
@@ -254,7 +254,7 @@ class SingleModelSummaryTests(unittest.TestCase):
                 validate_structure_pae_pairing(
                     structure, pae, ModelType.BOLTZ, summary_file=wrong_extension
                 )
-            with self.assertRaisesRegex(FileNotFoundError, "summary file not found"):
+            with self.assertRaisesRegex(FileNotFoundError, "confidence file not found"):
                 validate_structure_pae_pairing(
                     structure,
                     pae,
@@ -265,7 +265,7 @@ class SingleModelSummaryTests(unittest.TestCase):
     def test_af2_rejects_summary_input(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with self.assertRaisesRegex(ValueError, "Summary file"):
+            with self.assertRaisesRegex(ValueError, "AlphaFold2 jobs do not use"):
                 validate_structure_pae_pairing(
                     _touch(root / AF2_STRUCTURE),
                     _touch(root / AF2_PAE),
@@ -465,7 +465,7 @@ class SingleModelUiGateTests(unittest.TestCase):
         self.assertFalse(path_compatible_with_type("X_model_x.cif", ModelType.AF3, "structure"))
         self.assertFalse(path_compatible_with_type("X_full_data_x.json", ModelType.AF3, "pae"))
         self.assertFalse(
-            path_compatible_with_type("confidence_X_model_x.json", ModelType.BOLTZ, "summary")
+            path_compatible_with_type("confidence_X_model_x.json", ModelType.BOLTZ, "confidence")
         )
 
     def test_clear_incompatible_paths_for_cross_type_inputs(self) -> None:
@@ -474,7 +474,7 @@ class SingleModelUiGateTests(unittest.TestCase):
             model_type=ModelType.AF3,
             structure=AF2_STRUCTURE,
             pae=AF2_PAE,
-            summary="",
+            confidence="",
         )
         self.assertEqual(cleared_af3["structure"], "")
         self.assertEqual(cleared_af3["pae"], "")
@@ -484,7 +484,7 @@ class SingleModelUiGateTests(unittest.TestCase):
             model_type=ModelType.BOLTZ,
             structure=AF3_STRUCTURE,
             pae=AF3_PAE,
-            summary="",
+            confidence="",
         )
         self.assertEqual(cleared_boltz["structure"], AF3_STRUCTURE)
         self.assertEqual(cleared_boltz["pae"], "")
@@ -494,7 +494,7 @@ class SingleModelUiGateTests(unittest.TestCase):
             model_type=ModelType.AF3,
             structure=BOLTZ_STRUCTURE_CIF,
             pae=BOLTZ_PAE,
-            summary="",
+            confidence="",
         )
         self.assertEqual(cleared_to_af3["structure"], BOLTZ_STRUCTURE_CIF)
         self.assertEqual(cleared_to_af3["pae"], "")
@@ -504,43 +504,43 @@ class SingleModelUiGateTests(unittest.TestCase):
             model_type=None,
             structure=AF3_STRUCTURE,
             pae=AF3_PAE,
-            summary="confidence_X_model_0.json",
+            confidence="confidence_X_model_0.json",
         )
-        self.assertEqual(cleared_none, {"structure": "", "pae": "", "summary": ""})
+        self.assertEqual(cleared_none, {"structure": "", "pae": "", "confidence": ""})
 
     def test_clear_incompatible_paths_retains_valid_boltz_inputs(self) -> None:
         valid = clear_incompatible_paths(
             model_type=ModelType.BOLTZ,
             structure=BOLTZ_STRUCTURE_PDB,
             pae=BOLTZ_PAE,
-            summary="confidence_X_model_0.json",
+            confidence="confidence_X_model_0.json",
         )
         self.assertEqual(
             valid,
             {
                 "structure": BOLTZ_STRUCTURE_PDB,
                 "pae": BOLTZ_PAE,
-                "summary": "confidence_X_model_0.json",
+                "confidence": "confidence_X_model_0.json",
             },
         )
         invalid_summary = clear_incompatible_paths(
             model_type=ModelType.BOLTZ,
             structure=BOLTZ_STRUCTURE_CIF,
             pae=BOLTZ_PAE,
-            summary="X_summary_confidences_0.json",
+            confidence="X_summary_confidences_0.json",
         )
-        self.assertEqual(invalid_summary["summary"], "")
+        self.assertEqual(invalid_summary["confidence"], "")
 
-    def test_summary_prefill_requires_empty_value_and_existing_sibling(self) -> None:
+    def test_confidence_prefill_requires_empty_value_and_existing_sibling(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             pae = _touch(root / BOLTZ_PAE)
-            summary = _touch(root / "confidence_X_model_0.json")
-            self.assertEqual(maybe_prefill_boltz_summary(str(pae), ""), str(summary))
-            self.assertIsNone(maybe_prefill_boltz_summary(str(pae), "manual.json"))
-            self.assertIsNone(maybe_prefill_boltz_summary("", ""))
-            self.assertIsNone(maybe_prefill_boltz_summary(str(root / "pae_Y_model_0.npz"), ""))
-            self.assertIsNone(maybe_prefill_boltz_summary(str(root / "wrong.json"), ""))
+            confidence = _touch(root / "confidence_X_model_0.json")
+            self.assertEqual(maybe_prefill_boltz_confidence(str(pae), ""), str(confidence))
+            self.assertIsNone(maybe_prefill_boltz_confidence(str(pae), "manual.json"))
+            self.assertIsNone(maybe_prefill_boltz_confidence("", ""))
+            self.assertIsNone(maybe_prefill_boltz_confidence(str(root / "pae_Y_model_0.npz"), ""))
+            self.assertIsNone(maybe_prefill_boltz_confidence(str(root / "wrong.json"), ""))
 
     def test_selected_model_type_handles_empty_alias_and_unknown_values(self) -> None:
         self.assertIsNone(selected_model_type(None))

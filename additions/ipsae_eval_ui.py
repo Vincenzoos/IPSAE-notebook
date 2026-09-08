@@ -23,7 +23,7 @@ from single_model_eval import IpsaeJob, run_ipsae
 from single_model_ui_state import (
     clear_incompatible_paths,
     hint_text_for,
-    maybe_prefill_boltz_summary,
+    maybe_prefill_boltz_confidence,
     placeholders_for,
     selected_model_type,
     single_inputs_locked,
@@ -31,6 +31,9 @@ from single_model_ui_state import (
     upload_extensions_for,
 )
 from ui_helpers import (
+    AF2_OUTPUT_URL,
+    AF3_SERVER_OUTPUT_URL,
+    BOLTZ_OUTPUT_URL,
     ERR,
     INFO,
     OK,
@@ -38,7 +41,7 @@ from ui_helpers import (
     banner,
     clear_output,
     display,
-    example,
+    doc_link,
     html,
     publish_cell,
     warning,
@@ -51,8 +54,6 @@ from upload_widgets import (
     path_for_textbox,
 )
 from uploads import ensure_upload_dirs
-
-AF3_SERVER_OUTPUT_URL = "https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/"
 
 RESULT_MSG_ID = "ipsae-eval-result-msg"
 RESULT_TABLE_ID = "ipsae-eval-result-table"
@@ -73,7 +74,7 @@ def launch_ipsae_eval_ui() -> None:
         "bulk_jobs": [],
         "bulk_source": None,
         "bulk_type": None,
-        "auto_summary": None,
+        "auto_confidence": None,
     }
     cell_initialized: set[str] = set()
 
@@ -123,10 +124,10 @@ def launch_ipsae_eval_ui() -> None:
         disabled=True,
         layout=widgets.Layout(width="940px"),
     )
-    summary_path = widgets.Text(
+    confidence_path = widgets.Text(
         value="",
-        description="Boltz 1 / Boltz 2 summary",
-        placeholder=placeholders_for(None)["summary"],
+        description="Confidence",
+        placeholder=placeholders_for(None)["confidence"],
         disabled=True,
         layout=widgets.Layout(width="940px"),
     )
@@ -137,7 +138,7 @@ def launch_ipsae_eval_ui() -> None:
     bulk_folder_path = widgets.Text(
         value="",
         description="Folder",
-        placeholder="server path to AF3 Server or Boltz 1 / Boltz 2 export folder (or extract a zip below first)",
+        placeholder="Path to AF3 or Boltz 1 / Boltz 2 output folder (extract first if it's a zip file)",
         layout=widgets.Layout(width="940px"),
     )
     bulk_model_index = widgets.BoundedIntText(
@@ -153,12 +154,12 @@ def launch_ipsae_eval_ui() -> None:
 
     def on_pae_saved(path: Path) -> None:
         pae_path.value = path_for_textbox(path)
-        maybe_auto_summary()
+        maybe_auto_confidence()
         sync_single_controls(state["running"])
 
-    def on_summary_saved(path: Path) -> None:
-        state["auto_summary"] = None
-        summary_path.value = path_for_textbox(path)
+    def on_confidence_saved(path: Path) -> None:
+        state["auto_confidence"] = None
+        confidence_path.value = path_for_textbox(path)
         sync_single_controls(state["running"])
 
     structure_upload, set_structure_ext, set_structure_disabled = make_single_file_upload_row(
@@ -173,14 +174,14 @@ def launch_ipsae_eval_ui() -> None:
         on_saved=on_pae_saved,
         disabled=True,
     )
-    summary_upload, set_summary_ext, set_summary_disabled = make_single_file_upload_row(
-        description="Upload Boltz 1 / Boltz 2 summary",
-        allowed_extensions=upload_extensions_for(None)["summary"],
-        on_saved=on_summary_saved,
+    confidence_upload, set_confidence_ext, set_confidence_disabled = make_single_file_upload_row(
+        description="Upload confidence",
+        allowed_extensions=upload_extensions_for(None)["confidence"],
+        on_saved=on_confidence_saved,
         disabled=True,
     )
-    summary_box = widgets.VBox([summary_path, summary_upload])
-    summary_box.layout.display = "none"
+    confidence_box = widgets.VBox([confidence_path, confidence_upload])
+    confidence_box.layout.display = "none"
 
     def on_zip_extracted(path: Path) -> None:
         bulk_folder_path.value = path_for_textbox(path)
@@ -199,9 +200,9 @@ def launch_ipsae_eval_ui() -> None:
             html(
                 f'<ul style="{SOFT}font-size:12px;line-height:1.45;margin:2px 0 0 1.2em;padding-left:2em">'
                 "<li><b>PAE cutoff</b> (Å): only residue pairs with predicted aligned error below this "
-                "value count toward ipSAE.</li>"
+                "value are considered.</li>"
                 "<li><b>Dist cutoff</b> (Å): only pairs closer than this distance in the structure "
-                "are scored. Defaults of 10 Å are typical.</li>"
+                "are scored.</li>"
                 "</ul>"
             ),
         ],
@@ -216,7 +217,7 @@ def launch_ipsae_eval_ui() -> None:
         [
             html(
                 f'<span style="{SOFT}">Select a model type, then provide one matching structure and PAE file. '
-                "Type a server path or upload files below. Pairing is validated for the selected type "
+                "Type a server path or upload files below."
                 "(not inferred from filenames).</span>"
             ),
             widgets.HBox([model_type, type_hint]),
@@ -225,7 +226,7 @@ def launch_ipsae_eval_ui() -> None:
             structure_upload,
             pae_path,
             pae_upload,
-            summary_box,
+            confidence_box,
             collect_outputs,
             output_dir,
             run_single,
@@ -237,36 +238,48 @@ def launch_ipsae_eval_ui() -> None:
             html(
                 f'<span style="{SOFT}">Select a model-output folder already on the server, '
                 "or upload a zip via the JupyterLab file browser and Extract zip below. "
-                "Bulk mode auto-detects AlphaFold Server or Boltz 1 / Boltz 2 from PAE filenames, "
+                f"Bulk mode auto-detects {doc_link(AF3_SERVER_OUTPUT_URL, 'AlphaFold Server')} or "
+                f"{doc_link(BOLTZ_OUTPUT_URL, 'Boltz 1 / Boltz 2')} from PAE filenames, "
                 "then discovers matching structure files for the selected model index.</span>"
             ),
             warning(
-                "AF2 / ColabFold bulk discovery is not supported in v1. Use Single Model for AlphaFold2 outputs. "
-                "Bulk supports AlphaFold Server (*_full_data_N.json) and Boltz 1 / Boltz 2 "
-                "(pae_*_model_N.npz) folders only."
+                f"{doc_link(AF2_OUTPUT_URL, 'AF2')} / ColabFold bulk discovery is currently not supported. "
+                "Use Single Model for AlphaFold2 outputs. Bulk supports "
+                f"{doc_link(AF3_SERVER_OUTPUT_URL, 'AlphaFold Server')} (*_full_data_N.json) and "
+                f"{doc_link(BOLTZ_OUTPUT_URL, 'Boltz 1 / Boltz 2')} (pae_*_model_N.npz) folders only."
             ),
-            example(
-                "Example AlphaFold Server layout\n"
+            html(
+                '<div style="background:#f6f8fa;border:1px solid #d0d7de;color:#24292f;'
+                'padding:12px 16px;border-radius:6px;margin:8px 0;">'
+                f'<div style="font-family:sans-serif;margin-bottom:8px">Example '
+                f'{doc_link(AF3_SERVER_OUTPUT_URL, "AlphaFold Server")} layout</div>'
+                '<pre style="margin:0;font-family:monospace;white-space:pre-wrap">'
                 "AF3_outputs/\n"
                 "  fold_binder_001/\n"
                 "    fold_binder_001_model_0.cif\n"
                 "    fold_binder_001_full_data_0.json\n"
-                "    fold_binder_001_summary_confidences_0.json\n"
-                "\n"
-                "Example Boltz 1 / Boltz 2 layout\n"
+                "    fold_binder_001_summary_confidences_0.json"
+                "</pre>"
+                f'<div style="font-family:sans-serif;margin:12px 0 8px 0">Example '
+                f'{doc_link(BOLTZ_OUTPUT_URL, "Boltz 1 / Boltz 2")} layout</div>'
+                '<pre style="margin:0;font-family:monospace;white-space:pre-wrap">'
                 "Boltz_outputs/\n"
                 "  AURKA_TPX2/\n"
                 "    AURKA_TPX2_model_0.cif\n"
                 "    pae_AURKA_TPX2_model_0.npz\n"
                 "    confidence_AURKA_TPX2_model_0.json"
-            ),
-            html(
-                f'<span style="{SOFT}">Model index defaults to 0 (best-ranked / default model for both AF3 and Boltz 1 / Boltz 2). '
-                f'<a href="{AF3_SERVER_OUTPUT_URL}" target="_blank">Official AlphaFold Server output reference</a>.</span>'
+                "</pre></div>"
             ),
             bulk_folder_path,
             zip_upload_panel,
             bulk_model_index,
+            html(
+                f'<span style="{SOFT}">Which ranked prediction to evaluate '
+                "(files named <code>*_model_N</code> / <code>*_full_data_N</code>). "
+                "Defaults to 0 for best model for both "
+                f'{doc_link(AF3_SERVER_OUTPUT_URL, "AF3 Server")} and '
+                f'{doc_link(BOLTZ_OUTPUT_URL, "Boltz 1 / Boltz 2")}. </span>'
+            ),
             discover_bulk,
             run_bulk,
         ]
@@ -300,24 +313,24 @@ def launch_ipsae_eval_ui() -> None:
     def current_model_type() -> ModelType | None:
         return selected_model_type(model_type.value)
 
-    def maybe_auto_summary() -> None:
+    def maybe_auto_confidence() -> None:
         if current_model_type() is not ModelType.BOLTZ:
             return
-        current = summary_path.value.strip()
-        previous_auto = state["auto_summary"]
+        current = confidence_path.value.strip()
+        previous_auto = state["auto_confidence"]
         # Preserve a genuinely user-entered/uploaded value, but allow a prior
         # auto-fill to follow the PAE selection or clear when no sibling exists.
         if current and current != previous_auto:
-            state["auto_summary"] = None
+            state["auto_confidence"] = None
             return
-        prefill = maybe_prefill_boltz_summary(pae_path.value, "")
+        prefill = maybe_prefill_boltz_confidence(pae_path.value, "")
         if prefill:
             display_path = path_for_textbox(Path(prefill))
-            state["auto_summary"] = display_path
-            summary_path.value = display_path
+            state["auto_confidence"] = display_path
+            confidence_path.value = display_path
         elif previous_auto is not None:
-            state["auto_summary"] = None
-            summary_path.value = ""
+            state["auto_confidence"] = None
+            confidence_path.value = ""
 
     def apply_model_type_ui(_change=None) -> None:
         mt = current_model_type()
@@ -326,28 +339,28 @@ def launch_ipsae_eval_ui() -> None:
         type_hint.value = f'<div style="{SOFT}">{hint_text_for(mt)}</div>'
         structure_path.placeholder = placeholders["structure"]
         pae_path.placeholder = placeholders["pae"]
-        summary_path.placeholder = placeholders["summary"]
+        confidence_path.placeholder = placeholders["confidence"]
         set_structure_ext(extensions["structure"])
         set_pae_ext(extensions["pae"])
-        set_summary_ext(extensions["summary"])
+        set_confidence_ext(extensions["confidence"])
 
         cleared = clear_incompatible_paths(
             model_type=mt,
             structure=structure_path.value,
             pae=pae_path.value,
-            summary=summary_path.value,
+            confidence=confidence_path.value,
         )
         structure_path.value = cleared["structure"]
         pae_path.value = cleared["pae"]
-        summary_path.value = cleared["summary"]
+        confidence_path.value = cleared["confidence"]
 
         if mt is ModelType.BOLTZ:
-            summary_box.layout.display = None
-            maybe_auto_summary()
+            confidence_box.layout.display = None
+            maybe_auto_confidence()
         else:
-            summary_box.layout.display = "none"
-            state["auto_summary"] = None
-            summary_path.value = ""
+            confidence_box.layout.display = "none"
+            state["auto_confidence"] = None
+            confidence_path.value = ""
         sync_single_controls(state["running"])
 
     def current_job() -> IpsaeJob:
@@ -360,9 +373,9 @@ def launch_ipsae_eval_ui() -> None:
             raise ValueError("Structure path is empty.")
         if not pae:
             raise ValueError("PAE path is empty.")
-        summary = summary_path.value.strip() or None
+        confidence = confidence_path.value.strip() or None
         if mt is not ModelType.BOLTZ:
-            summary = None
+            confidence = None
         return IpsaeJob(
             label=label.value.strip() or model_name_from_structure(structure),
             pae_file=Path(pae),
@@ -370,7 +383,7 @@ def launch_ipsae_eval_ui() -> None:
             model_type=mt,
             pae_cutoff=float(pae_cutoff.value),
             dist_cutoff=float(dist_cutoff.value),
-            summary_file=Path(summary) if summary else None,
+            summary_file=Path(confidence) if confidence else None,
         )
 
     def selected_bulk_folder() -> str:
@@ -385,10 +398,10 @@ def launch_ipsae_eval_ui() -> None:
         label.disabled = locked
         structure_path.disabled = locked
         pae_path.disabled = locked
-        summary_path.disabled = locked
+        confidence_path.disabled = locked
         set_structure_disabled(locked)
         set_pae_disabled(locked)
-        set_summary_disabled(locked)
+        set_confidence_disabled(locked)
         collect_outputs.disabled = locked
         output_dir.disabled = locked or not collect_outputs.value
         ready = single_run_ready(
@@ -486,7 +499,7 @@ def launch_ipsae_eval_ui() -> None:
                 f"for index {int(bulk_model_index.value)}. Review the table, then run ipSAE."
             )
             if warned:
-                msg += f" {warned} Boltz 1 / Boltz 2 row(s) are missing a summary file (runnable with warning)."
+                msg += f" {warned} Boltz 1 / Boltz 2 row(s) are missing a confidence file (runnable with warning)."
             set_status(msg, OK if ready_count == len(preview) and not warned else INFO)
             show_cell_result(msg, OK if ready_count == len(preview) and not warned else INFO, table=preview)
         except Exception as exc:
@@ -576,20 +589,20 @@ def launch_ipsae_eval_ui() -> None:
         threading.Thread(target=work, daemon=True).start()
 
     def on_pae_path_change(_change=None) -> None:
-        maybe_auto_summary()
+        maybe_auto_confidence()
         sync_single_controls(state["running"])
 
-    def on_summary_path_change(change=None) -> None:
-        new_value = ((change or {}).get("new") or summary_path.value).strip()
-        if new_value != state["auto_summary"]:
-            state["auto_summary"] = None
+    def on_confidence_path_change(change=None) -> None:
+        new_value = ((change or {}).get("new") or confidence_path.value).strip()
+        if new_value != state["auto_confidence"]:
+            state["auto_confidence"] = None
         sync_single_controls(state["running"])
 
     collect_outputs.observe(lambda _change: sync_single_controls(state["running"]), names="value")
     model_type.observe(apply_model_type_ui, names="value")
     structure_path.observe(lambda change: sync_single_controls(state["running"]), names="value")
     pae_path.observe(on_pae_path_change, names="value")
-    summary_path.observe(on_summary_path_change, names="value")
+    confidence_path.observe(on_confidence_path_change, names="value")
     bulk_folder_path.observe(on_bulk_input_changed, names="value")
     bulk_model_index.observe(on_bulk_input_changed, names="value")
     apply_model_type_ui()

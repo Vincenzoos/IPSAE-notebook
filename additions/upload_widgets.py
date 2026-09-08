@@ -8,7 +8,17 @@ from typing import Callable
 
 from folder_picker import make_folder_picker, refresh_folder_dropdown
 from paths import UPLOAD_FOLDERS_DIR, rel_repo_path
-from ui_helpers import ERR, INFO, OK, SOFT, warning, widgets
+from ui_helpers import (
+    AF3_SERVER_OUTPUT_URL,
+    BOLTZ_OUTPUT_URL,
+    doc_link,
+    ERR,
+    INFO,
+    OK,
+    SOFT,
+    warning,
+    widgets,
+)
 from uploads import (
     STRUCTURE_EXTENSIONS,
     MAX_ZIP_BYTES,
@@ -129,8 +139,10 @@ def make_zip_folder_upload_panel(
     )
     status = widgets.HTML(
         value=(
-            f'<span style="{SOFT}">Upload an AF3 Server or Boltz 1 / Boltz 2 export zip in the left file browser '
-            f"(up to {limit_gb} GB), paste its path above, then Extract zip.</span>"
+            f'<span style="{SOFT}">If using file browser instead of the upload widget for uploading'
+            f"{doc_link(AF3_SERVER_OUTPUT_URL, 'AF3 Server')} or "
+            f"{doc_link(BOLTZ_OUTPUT_URL, 'Boltz 1 / Boltz 2')} zip file"
+            f"(up to {limit_gb} GB), then paste its path above and click Extract zip.</span>"
         )
     )
 
@@ -184,14 +196,13 @@ def make_zip_folder_upload_panel(
     return widgets.VBox(
         [
             warning(
-                "For full AF3 Server or Boltz 1 / Boltz 2 folders, use the JupyterLab file browser + Zip path / Extract zip "
-                f"(archives up to {limit_gb} GB). The widget Upload zip path loads the whole file in the "
-                "browser kernel session and can hang on large transfers — prefer the file browser."
+                f"Upload limit for {doc_link(AF3_SERVER_OUTPUT_URL, 'AF3 Server')} or "
+                f"{doc_link(BOLTZ_OUTPUT_URL, 'Boltz 1 / Boltz 2')} zip "
+                f"is upto {limit_gb} GB. The Interface can hang on large transfers even though upload and evaluation jobs completed."
             ),
             widgets.HBox([zip_path, extract_btn]),
             widgets.HTML(
-                f'<span style="{SOFT}">Optional: Upload zip widget (same {limit_gb} GB archive cap; '
-                "file browser is more reliable for large exports).</span>"
+                f'<span style="{SOFT}">Use Jupyterlab/Github codespaces file browser instead of the upload widget for large imports.</span>'
             ),
             uploader,
             status,
