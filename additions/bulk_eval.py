@@ -1,4 +1,4 @@
-"""Bulk AF3 Server / Boltz discovery and ipSAE execution helpers."""
+"""Bulk AF3 Server / Boltz 1 / Boltz 2 discovery and ipSAE execution helpers."""
 
 from __future__ import annotations
 
@@ -215,7 +215,7 @@ def discover_boltz_models(
     pae_cutoff: float = 10.0,
     dist_cutoff: float = 10.0,
 ) -> tuple[list[IpsaeJob], pd.DataFrame]:
-    """Find Boltz pae_*_model_N.npz files and matching structure/summary siblings."""
+    """Find Boltz 1 / Boltz 2 pae_*_model_N.npz files and matching structure/summary siblings."""
     root = resolve_repo_path(folder)
     if not root.exists():
         raise FileNotFoundError(f"Folder not found: {root}")
@@ -254,7 +254,7 @@ def discover_boltz_models(
         error = ""
         if len(structures) > 1:
             names = " | ".join(path.name for path in structures)
-            error = f"Ambiguous Boltz structure: multiple counterparts exist: {names}."
+            error = f"Ambiguous Boltz 1 / Boltz 2 structure: multiple counterparts exist: {names}."
         elif not structures:
             error = (
                 "Missing structure counterpart "
@@ -303,7 +303,7 @@ def discover_boltz_models(
     preview = pd.DataFrame(rows, columns=PREVIEW_COLUMNS)
     if preview.empty:
         raise FileNotFoundError(
-            f"No Boltz files found for model index {model_index}. "
+            f"No Boltz 1 / Boltz 2 files found for model index {model_index}. "
             f"Expected files like pae_<complex>_model_{model_index}.npz with matching "
             f"<complex>_model_{model_index}.pdb or .cif in the same folder."
         )
@@ -316,7 +316,7 @@ def discover_bulk_models(
     pae_cutoff: float = 10.0,
     dist_cutoff: float = 10.0,
 ) -> tuple[list[IpsaeJob], pd.DataFrame, ModelType]:
-    """Auto-detect AF3 or Boltz under folder, then discover jobs for model_index."""
+    """Auto-detect AF3 or Boltz 1 / Boltz 2 under folder, then discover jobs for model_index."""
     root = resolve_repo_path(folder)
     model_type = detect_bulk_model_type(root)
     if model_type is ModelType.AF3:

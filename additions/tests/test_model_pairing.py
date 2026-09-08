@@ -28,7 +28,7 @@ class ModelTypeTests(unittest.TestCase):
         self.assertEqual(MODEL_TYPE_CHOICES[0], ("Select model type…", ""))
         self.assertIn(("AlphaFold2", "af2"), MODEL_TYPE_CHOICES)
         self.assertIn(("AlphaFold3", "af3"), MODEL_TYPE_CHOICES)
-        self.assertIn(("Boltz", "boltz"), MODEL_TYPE_CHOICES)
+        self.assertIn(("Boltz 1 / Boltz 2", "boltz"), MODEL_TYPE_CHOICES)
 
     def test_model_type_aliases(self) -> None:
         cases = {

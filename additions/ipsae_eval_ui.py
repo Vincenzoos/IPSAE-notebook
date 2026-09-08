@@ -80,7 +80,7 @@ def launch_ipsae_eval_ui() -> None:
     pae_cutoff = widgets.FloatText(value=10.0, description="PAE cutoff", layout=widgets.Layout(width="220px"))
     dist_cutoff = widgets.FloatText(value=10.0, description="Dist cutoff", layout=widgets.Layout(width="220px"))
     collect_outputs = widgets.Checkbox(
-        value=False,
+        value=True,
         description="Copy outputs to separate folder",
         disabled=True,
     )
@@ -125,7 +125,7 @@ def launch_ipsae_eval_ui() -> None:
     )
     summary_path = widgets.Text(
         value="",
-        description="Boltz summary",
+        description="Boltz 1 / Boltz 2 summary",
         placeholder=placeholders_for(None)["summary"],
         disabled=True,
         layout=widgets.Layout(width="940px"),
@@ -137,7 +137,7 @@ def launch_ipsae_eval_ui() -> None:
     bulk_folder_path = widgets.Text(
         value="",
         description="Folder",
-        placeholder="server path to AF3 Server or Boltz export folder (or extract a zip below first)",
+        placeholder="server path to AF3 Server or Boltz 1 / Boltz 2 export folder (or extract a zip below first)",
         layout=widgets.Layout(width="940px"),
     )
     bulk_model_index = widgets.BoundedIntText(
@@ -174,7 +174,7 @@ def launch_ipsae_eval_ui() -> None:
         disabled=True,
     )
     summary_upload, set_summary_ext, set_summary_disabled = make_single_file_upload_row(
-        description="Upload Boltz summary",
+        description="Upload Boltz 1 / Boltz 2 summary",
         allowed_extensions=upload_extensions_for(None)["summary"],
         on_saved=on_summary_saved,
         disabled=True,
@@ -188,7 +188,29 @@ def launch_ipsae_eval_ui() -> None:
 
     zip_upload_panel = make_zip_folder_upload_panel(on_extracted=on_zip_extracted)
 
-    settings_panel = widgets.VBox([widgets.HBox([pae_cutoff, dist_cutoff])])
+    # flex="0 0 auto" keeps cutoffs visible when a parent sets a fixed height/overflow
+    # (e.g. Colab scroll wrapper); otherwise the Tab below can crush this row.
+    settings_panel = widgets.VBox(
+        [
+            widgets.HBox(
+                [pae_cutoff, dist_cutoff],
+                layout=widgets.Layout(width="100%", align_items="center"),
+            ),
+            html(
+                f'<ul style="{SOFT}font-size:12px;line-height:1.45;margin:2px 0 0 1.2em;padding-left:2em">'
+                "<li><b>PAE cutoff</b> (Å): only residue pairs with predicted aligned error below this "
+                "value count toward ipSAE.</li>"
+                "<li><b>Dist cutoff</b> (Å): only pairs closer than this distance in the structure "
+                "are scored. Defaults of 10 Å are typical.</li>"
+                "</ul>"
+            ),
+        ],
+        layout=widgets.Layout(
+            width="100%",
+            flex="0 0 auto",
+            margin="4px 0 12px 0",
+        ),
+    )
 
     single_panel = widgets.VBox(
         [
@@ -215,12 +237,13 @@ def launch_ipsae_eval_ui() -> None:
             html(
                 f'<span style="{SOFT}">Select a model-output folder already on the server, '
                 "or upload a zip via the JupyterLab file browser and Extract zip below. "
-                "Bulk mode auto-detects AlphaFold Server or Boltz from PAE filenames, "
+                "Bulk mode auto-detects AlphaFold Server or Boltz 1 / Boltz 2 from PAE filenames, "
                 "then discovers matching structure files for the selected model index.</span>"
             ),
             warning(
                 "AF2 / ColabFold bulk discovery is not supported in v1. Use Single Model for AlphaFold2 outputs. "
-                "Bulk supports AlphaFold Server (*_full_data_N.json) and Boltz (pae_*_model_N.npz) folders only."
+                "Bulk supports AlphaFold Server (*_full_data_N.json) and Boltz 1 / Boltz 2 "
+                "(pae_*_model_N.npz) folders only."
             ),
             example(
                 "Example AlphaFold Server layout\n"
@@ -230,7 +253,7 @@ def launch_ipsae_eval_ui() -> None:
                 "    fold_binder_001_full_data_0.json\n"
                 "    fold_binder_001_summary_confidences_0.json\n"
                 "\n"
-                "Example Boltz layout\n"
+                "Example Boltz 1 / Boltz 2 layout\n"
                 "Boltz_outputs/\n"
                 "  AURKA_TPX2/\n"
                 "    AURKA_TPX2_model_0.cif\n"
@@ -238,7 +261,7 @@ def launch_ipsae_eval_ui() -> None:
                 "    confidence_AURKA_TPX2_model_0.json"
             ),
             html(
-                f'<span style="{SOFT}">Model index defaults to 0 (best-ranked / default model for both AF3 and Boltz). '
+                f'<span style="{SOFT}">Model index defaults to 0 (best-ranked / default model for both AF3 and Boltz 1 / Boltz 2). '
                 f'<a href="{AF3_SERVER_OUTPUT_URL}" target="_blank">Official AlphaFold Server output reference</a>.</span>'
             ),
             bulk_folder_path,
@@ -463,7 +486,7 @@ def launch_ipsae_eval_ui() -> None:
                 f"for index {int(bulk_model_index.value)}. Review the table, then run ipSAE."
             )
             if warned:
-                msg += f" {warned} Boltz row(s) are missing a summary file (runnable with warning)."
+                msg += f" {warned} Boltz 1 / Boltz 2 row(s) are missing a summary file (runnable with warning)."
             set_status(msg, OK if ready_count == len(preview) and not warned else INFO)
             show_cell_result(msg, OK if ready_count == len(preview) and not warned else INFO, table=preview)
         except Exception as exc:
@@ -580,8 +603,11 @@ def launch_ipsae_eval_ui() -> None:
             [
                 banner("ipSAE Evaluation"),
                 html(
-                    f'<span style="{SOFT}">Using original DunbrackLab script: {rel_repo_path(IPSAE_SCRIPT)}. '
-                    "Single Model supports AF2, AF3 Server, and Boltz. Bulk auto-detects AF3 Server or Boltz.</span>"
+                    f'<span style="{SOFT}">This notebook is built on top of the '
+                    f'<a href="https://github.com/DunbrackLab/IPSAE.git" target="_blank">DunbrackLab IPSAE repository</a>. '
+                    'Single Model supports <a href="https://github.com/google-deepmind/alphafold/blob/main/README.md#alphafold-output" target="_blank">AF2</a>, '
+                    '<a href="https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/" target="_blank">AF3 Server</a>, '
+                    'and <a href="https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output" target="_blank">Boltz 1 / Boltz 2</a>. '
                 ),
                 settings_panel,
                 tabs,

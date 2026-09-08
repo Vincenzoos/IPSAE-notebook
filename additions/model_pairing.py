@@ -1,6 +1,6 @@
 """Structure/PAE filename pairing validation and bulk discovery helpers.
 
-Supports AlphaFold2 (single model), AlphaFold Server (AF3), and Boltz naming.
+Supports AlphaFold2 (single model), AlphaFold Server (AF3), and Boltz 1 / Boltz 2 naming.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ class ModelType(str, Enum):
         return {
             ModelType.AF2: "AlphaFold2",
             ModelType.AF3: "AlphaFold3",
-            ModelType.BOLTZ: "Boltz",
+            ModelType.BOLTZ: "Boltz 1 / Boltz 2",
         }[self]
 
 
@@ -30,12 +30,12 @@ MODEL_TYPE_CHOICES: tuple[tuple[str, str], ...] = (
     ("Select model type…", ""),
     ("AlphaFold2", ModelType.AF2.value),
     ("AlphaFold3", ModelType.AF3.value),
-    ("Boltz", ModelType.BOLTZ.value),
+    ("Boltz 1 / Boltz 2", ModelType.BOLTZ.value),
 )
 
 BOLTZ_MISSING_SUMMARY_WARNING = (
-    "Boltz summary file not found. ipSAE will still run, but Boltz ipTM values "
-    "may be unavailable or zero."
+    "Boltz 1 / Boltz 2 summary file not found. ipSAE will still run, but Boltz 1 / Boltz 2 "
+    "ipTM values may be unavailable or zero."
 )
 
 AF2_STRUCTURE_RE = re.compile(
@@ -84,11 +84,13 @@ TYPE_HINTS: dict[ModelType, TypeHints] = {
         structure_extensions=frozenset({".pdb"}),
         pae_extensions=frozenset({".json"}),
         hint_html=(
-            "AlphaFold2 / ColabFold default naming: structure "
-            "<code>*_unrelaxed_rank_&lt;rank&gt;_&lt;details&gt;.pdb</code> "
-            "with matching PAE <code>*_scores_rank_&lt;rank&gt;_&lt;details&gt;.json</code>. "
-            "Example: <code>RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb</code> "
-            "+ <code>RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json</code>."
+            'AlphaFold2 / ColabFold default naming: structure '
+            '<code>*_unrelaxed_rank_&lt;rank&gt;_&lt;details&gt;.pdb</code> '
+            'with matching PAE <code>*_scores_rank_&lt;rank&gt;_&lt;details&gt;.json</code>. '
+            'Example: <code>RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb</code> '
+            '+ <code>RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json</code>. '
+            '<a href="https://github.com/google-deepmind/alphafold/blob/main/README.md#alphafold-output" '
+            'target="_blank">[AlphaFold2 details]</a>'
         ),
     ),
     ModelType.AF3: TypeHints(
@@ -97,10 +99,13 @@ TYPE_HINTS: dict[ModelType, TypeHints] = {
         structure_extensions=frozenset({".cif"}),
         pae_extensions=frozenset({".json"}),
         hint_html=(
-            "AlphaFold Server naming: structure <code>*_model_N.cif</code> with matching "
-            "PAE <code>*_full_data_N.json</code> (same complex and N). "
-            "Example: <code>fold_aurka_tpx2_model_0.cif</code> + "
-            "<code>fold_aurka_tpx2_full_data_0.json</code>."
+            'AlphaFold Server naming: structure <code>*_model_N.cif</code> with matching '
+            'PAE <code>*_full_data_N.json</code> (same complex and N). '
+            'Example: <code>fold_aurka_tpx2_model_0.cif</code> + '
+            '<code>fold_aurka_tpx2_full_data_0.json</code>. '
+            '<a href="https://www.ebi.ac.uk/training/online/courses/alphafold/alphafold-3-and-alphafold-server/'
+            'alphafold-server-your-gateway-to-alphafold-3/interpreting-results-from-alphafold-server/" '
+            'target="_blank">[AlphaFold Server output reference]</a>'
         ),
     ),
     ModelType.BOLTZ: TypeHints(
@@ -110,11 +115,13 @@ TYPE_HINTS: dict[ModelType, TypeHints] = {
         pae_extensions=frozenset({".npz"}),
         summary_placeholder="confidence_<complex>_model_0.json",
         hint_html=(
-            "Boltz naming: structure <code>&lt;complex&gt;_model_N.pdb</code> or "
-            "<code>.cif</code> with PAE <code>pae_&lt;complex&gt;_model_N.npz</code>. "
-            "Optional summary <code>confidence_&lt;complex&gt;_model_N.json</code>. "
-            "Example: <code>AURKA_TPX2_model_0.cif</code> + "
-            "<code>pae_AURKA_TPX2_model_0.npz</code>."
+            'Boltz 1 / Boltz 2 naming: structure <code>&lt;complex&gt;_model_N.pdb</code> or '
+            '<code>.cif</code> with PAE <code>pae_&lt;complex&gt;_model_N.npz</code>. '
+            'Optional summary <code>confidence_&lt;complex&gt;_model_N.json</code>. '
+            'Example: <code>AURKA_TPX2_model_0.cif</code> + '
+            '<code>pae_AURKA_TPX2_model_0.npz</code>. '
+            '<a href="https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output" '
+            'target="_blank">[Boltz 1 / Boltz 2 output docs]</a>'
         ),
     ),
 }
@@ -124,7 +131,9 @@ def parse_model_type(value: str | ModelType | None) -> ModelType:
     if isinstance(value, ModelType):
         return value
     if value is None or str(value).strip() == "":
-        raise ValueError("Model type is required. Select AlphaFold2, AlphaFold3, or Boltz.")
+        raise ValueError(
+            "Model type is required. Select AlphaFold2, AlphaFold3, or Boltz 1 / Boltz 2."
+        )
     key = str(value).strip().lower()
     aliases = {
         "af2": ModelType.AF2,
@@ -135,10 +144,17 @@ def parse_model_type(value: str | ModelType | None) -> ModelType:
         "alphafold server": ModelType.AF3,
         "boltz": ModelType.BOLTZ,
         "boltz1": ModelType.BOLTZ,
+        "boltz 1": ModelType.BOLTZ,
         "boltz2": ModelType.BOLTZ,
+        "boltz 2": ModelType.BOLTZ,
+        "boltz 1 / boltz 2": ModelType.BOLTZ,
+        "boltz1/2": ModelType.BOLTZ,
+        "boltz1 / boltz2": ModelType.BOLTZ,
     }
     if key not in aliases:
-        raise ValueError(f"Unknown model type: {value!r}. Expected af2, af3, or boltz.")
+        raise ValueError(
+            f"Unknown model type: {value!r}. Expected af2, af3, or boltz (Boltz 1 / Boltz 2)."
+        )
     return aliases[key]
 
 
@@ -155,7 +171,7 @@ def pae_extensions_for(model_type: str | ModelType) -> frozenset[str]:
 
 
 def boltz_companion_paths(pae_file: str | Path) -> tuple[Path, Path]:
-    """Derive confidence JSON and pLDDT NPZ siblings from a Boltz PAE path.
+    """Derive confidence JSON and pLDDT NPZ siblings from a Boltz 1 / Boltz 2 PAE path.
 
     Only the filename is transformed so parent directories containing ``pae``
     are left unchanged.
@@ -164,7 +180,7 @@ def boltz_companion_paths(pae_file: str | Path) -> tuple[Path, Path]:
     name = pae_path.name
     if pae_path.suffix != ".npz" or BOLTZ_PAE_RE.match(pae_path.stem) is None:
         raise ValueError(
-            "Boltz PAE file must be named like 'pae_<complex>_model_N.npz'. "
+            "Boltz 1 / Boltz 2 PAE file must be named like 'pae_<complex>_model_N.npz'. "
             f"Got '{name}'."
         )
     base = name[len("pae_") : -len(".npz")]
@@ -407,7 +423,7 @@ def _validate_boltz_summary(
 ) -> None:
     if summary_path.suffix != ".json":
         raise ValueError(
-            "Boltz summary file must be a .json file matching "
+            "Boltz 1 / Boltz 2 summary file must be a .json file matching "
             "'confidence_<complex>_model_N.json'. "
             f"Got '{summary_path.name}'."
         )
@@ -415,18 +431,19 @@ def _validate_boltz_summary(
     expected = expected_boltz_summary_path(pae_path)
     if not summary:
         raise ValueError(
-            "Boltz summary filename mismatch: expected "
+            "Boltz 1 / Boltz 2 summary filename mismatch: expected "
             f"'{expected.name}'. Got '{summary_path.name}'."
         )
     if summary.complex_id != structure.complex_id or summary.model_index != structure.model_index:
         raise ValueError(
-            "Boltz summary mismatch: summary must match the structure/PAE complex and model index. "
+            "Boltz 1 / Boltz 2 summary mismatch: summary must match the structure/PAE "
+            "complex and model index. "
             f"Got '{summary_path.name}' for structure complex '{structure.complex_id}' "
             f"model {structure.model_index}."
         )
     if summary_path.name != expected.name:
         raise ValueError(
-            "Boltz summary filename mismatch: expected sibling "
+            "Boltz 1 / Boltz 2 summary filename mismatch: expected sibling "
             f"'{expected.name}' for PAE '{pae_path.name}'. Got '{summary_path.name}'."
         )
 
@@ -438,24 +455,26 @@ def _validate_boltz(
 ) -> tuple[PairInfo, Path | None, str | None]:
     if structure_path.suffix not in {".pdb", ".cif"}:
         raise ValueError(
-            "Boltz structure must be a .pdb or .cif file matching '<complex>_model_N'. "
+            "Boltz 1 / Boltz 2 structure must be a .pdb or .cif file matching "
+            "'<complex>_model_N'. "
             f"Got '{structure_path.name}'."
         )
     if pae_path.suffix != ".npz":
         raise ValueError(
-            "Boltz PAE must be a .npz file matching 'pae_<complex>_model_N.npz'. "
+            "Boltz 1 / Boltz 2 PAE must be a .npz file matching 'pae_<complex>_model_N.npz'. "
             f"Got '{pae_path.name}'."
         )
     structure = parse_boltz_structure_pairing(structure_path)
     pae = parse_boltz_pae_pairing(pae_path)
     if not structure or not pae:
         raise ValueError(
-            "Boltz structure/PAE mismatch: expected structure '<complex>_model_N.pdb|.cif' "
+            "Boltz 1 / Boltz 2 structure/PAE mismatch: expected structure "
+            "'<complex>_model_N.pdb|.cif' "
             f"with PAE 'pae_<complex>_model_N.npz'. Got '{structure_path.name}' and '{pae_path.name}'."
         )
     if structure.complex_id != pae.complex_id or structure.model_index != pae.model_index:
         raise ValueError(
-            "Boltz structure/PAE mismatch: complex and model index must match. "
+            "Boltz 1 / Boltz 2 structure/PAE mismatch: complex and model index must match. "
             f"Got '{structure_path.name}' and '{pae_path.name}'."
         )
 
@@ -463,7 +482,7 @@ def _validate_boltz(
     warning: str | None = None
     if summary_file is not None and str(summary_file).strip():
         summary_path = Path(summary_file)
-        _require_regular_file(summary_path, "Boltz summary file")
+        _require_regular_file(summary_path, "Boltz 1 / Boltz 2 summary file")
         _validate_boltz_summary(summary_path, structure, pae_path)
         _require_same_folder(
             [structure_path, pae_path, summary_path],
@@ -489,7 +508,7 @@ def validate_structure_pae_pairing(
 ) -> dict:
     """Validate structure/PAE pairing for an explicit model type.
 
-    Returns a dict with pair info and optional Boltz summary path/warning.
+    Returns a dict with pair info and optional Boltz 1 / Boltz 2 summary path/warning.
     """
     model = parse_model_type(model_type)
     structure_path = Path(structure_file)
@@ -503,7 +522,7 @@ def validate_structure_pae_pairing(
     summary_path: Path | None = None
     if model is ModelType.AF2:
         if summary_file is not None and str(summary_file).strip():
-            raise ValueError("Summary file is only used for Boltz jobs.")
+            raise ValueError("Summary file is only used for Boltz 1 / Boltz 2 jobs.")
         info = _validate_af2(structure_path, pae_path)
     elif model is ModelType.AF3:
         info = _validate_af3(structure_path, pae_path)
@@ -541,7 +560,7 @@ validate_af3_structure_pae_pairing = lambda structure_file, pae_file: validate_s
 
 
 def detect_bulk_model_type(folder: str | Path) -> ModelType:
-    """Detect AF3 Server vs Boltz from PAE signatures under a folder."""
+    """Detect AF3 Server vs Boltz 1 / Boltz 2 from PAE signatures under a folder."""
     root = Path(folder)
     if not root.exists():
         raise FileNotFoundError(f"Folder not found: {root}")
@@ -565,7 +584,7 @@ def detect_bulk_model_type(folder: str | Path) -> ModelType:
     if has_af3 and has_boltz:
         raise ValueError(
             "Mixed model-type folder: found both AlphaFold Server "
-            "(*_full_data_N.json) and Boltz (pae_*_model_N.npz) PAE signatures. "
+            "(*_full_data_N.json) and Boltz 1 / Boltz 2 (pae_*_model_N.npz) PAE signatures. "
             "Bulk evaluation requires a folder with only one supported type."
         )
     if has_af3:
@@ -575,11 +594,11 @@ def detect_bulk_model_type(folder: str | Path) -> ModelType:
     if has_af2_hint:
         raise ValueError(
             "Unsupported AF2-style bulk input. v1 bulk evaluation supports AlphaFold Server "
-            "and Boltz folders only. Use Single Model for AlphaFold2 / ColabFold outputs."
+            "and Boltz 1 / Boltz 2 folders only. Use Single Model for AlphaFold2 / ColabFold outputs."
         )
     raise ValueError(
         "Unrecognized folder for bulk evaluation. v1 supports AlphaFold Server folders "
-        "with '*_full_data_N.json' or Boltz folders with 'pae_*_model_N.npz'. "
+        "with '*_full_data_N.json' or Boltz 1 / Boltz 2 folders with 'pae_*_model_N.npz'. "
         "AF2 bulk discovery is not supported."
     )
 

@@ -129,7 +129,7 @@ def make_zip_folder_upload_panel(
     )
     status = widgets.HTML(
         value=(
-            f'<span style="{SOFT}">Upload an AF3 Server or Boltz export zip in the left file browser '
+            f'<span style="{SOFT}">Upload an AF3 Server or Boltz 1 / Boltz 2 export zip in the left file browser '
             f"(up to {limit_gb} GB), paste its path above, then Extract zip.</span>"
         )
     )
@@ -184,7 +184,7 @@ def make_zip_folder_upload_panel(
     return widgets.VBox(
         [
             warning(
-                "For full AF3 Server or Boltz folders, use the JupyterLab file browser + Zip path / Extract zip "
+                "For full AF3 Server or Boltz 1 / Boltz 2 folders, use the JupyterLab file browser + Zip path / Extract zip "
                 f"(archives up to {limit_gb} GB). The widget Upload zip path loads the whole file in the "
                 "browser kernel session and can hang on large transfers — prefer the file browser."
             ),
