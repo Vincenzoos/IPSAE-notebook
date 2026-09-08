@@ -3,3 +3,8 @@ __pycache__/
 upload/
 # venv on codespace
 ipsae-notebook/
+
+# Ignore ipsae evals output folders
+ipsae_evals/
+/bulk_ipsae_evals_*/
+
