@@ -217,8 +217,7 @@ def launch_ipsae_eval_ui() -> None:
         [
             html(
                 f'<span style="{SOFT}">Select a model type, then provide one matching structure and PAE file. '
-                "Type a server path or upload files below."
-                "(not inferred from filenames).</span>"
+                "Type a server path or upload files below.</span>"
             ),
             widgets.HBox([model_type, type_hint]),
             label,
