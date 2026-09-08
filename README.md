@@ -43,6 +43,16 @@ https://codespaces.new/Vincenzoos/IPSAE-notebook?quickstart=1&editor=jupyter
 
 If Binder is unavailable or slow, open the notebook in Codespaces. A free GitHub account is required; no other setup. The dev container installs Python, JupyterLab, widgets, and zip/unzip automatically. Short walkthrough for non-coders: [CODESPACES.md](CODESPACES.md).
 
+**Local machine Installation:**
+
+```bash
+bash install_local.sh
+conda activate ipsae-notebook
+jupyter lab ipsae_eval.ipynb
+```
+
+Creates conda env `ipsae-notebook`, installs notebook deps, registers a Jupyter kernel, and installs recommended Cursor/VS Code extensions when the `cursor` or `code` CLI is available.
+
 **Google Colab:**
 
 [Open In Colab](https://colab.research.google.com/github/Vincenzoos/IPSAE-notebook/blob/main/ipsae_eval.ipynb)

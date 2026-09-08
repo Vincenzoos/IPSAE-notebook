@@ -22,7 +22,10 @@
       "extensions": [
         "ms-python.python",
         "ms-toolsai.jupyter",
-        "ms-toolsai.jupyter-renderers"
+        "ms-toolsai.jupyter-renderers",
+        "openai.chatgpt",
+        "cweijan.vscode-office",
+        "ArianJamasb.protein-viewer"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",

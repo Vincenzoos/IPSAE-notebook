@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-toolsai.jupyter",
+    "ms-toolsai.jupyter-renderers",
+    "openai.chatgpt",
+    "cweijan.vscode-office",
+    "ArianJamasb.protein-viewer"
+  ]
+}
