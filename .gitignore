@@ -1,3 +1,5 @@
 dev plan/
 __pycache__/
 upload/
+# venv on codespace
+ipsae-notebook/
