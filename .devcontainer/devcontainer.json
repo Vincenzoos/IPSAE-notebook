@@ -7,6 +7,10 @@
   "remoteUser": "vscode",
   "waitFor": "postCreateCommand",
   "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteEnv": {
+    "PATH": "${containerWorkspaceFolder}/ipsae-notebook/bin:${containerEnv:PATH}",
+    "VIRTUAL_ENV": "${containerWorkspaceFolder}/ipsae-notebook"
+  },
   "forwardPorts": [8888],
   "portsAttributes": {
     "8888": {
@@ -28,8 +32,9 @@
         "ArianJamasb.protein-viewer"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.terminal.activateEnvironment": false,
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/ipsae-notebook/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "notebook.defaultKernel": "ipsae-notebook",
         "workbench.editorAssociations": {
           "*.ipynb": "jupyter-notebook"
         }
